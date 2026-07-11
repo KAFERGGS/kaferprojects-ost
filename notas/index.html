@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>KaferNotes</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{height:100%}
+body{background:#0a0a0f;color:#eee;font-family:system-ui,-apple-system,sans-serif;display:flex;flex-direction:column;font-size:14px}
+.top{display:flex;align-items:center;gap:6px;padding:6px 12px;height:46px;flex-shrink:0;background:rgba(0,0,0,.5);border-bottom:1px solid rgba(255,255,255,.06)}
+.top h1{font-size:14px;font-weight:700}
+.top .sp{flex:1}
+.top button{background:none;border:1px solid rgba(255,255,255,.08);border-radius:5px;color:rgba(255,255,255,.5);cursor:pointer;height:28px;padding:0 8px;font-size:11px;transition:.1s}
+.top button:hover{color:#fff;border-color:rgba(255,255,255,.2)}
+.lyt{display:flex;flex:1;min-height:0}
+.sb{width:180px;border-right:1px solid rgba(255,255,255,.06);display:flex;flex-direction:column;flex-shrink:0}
+.sb-h{display:flex;align-items:center;justify-content:space-between;padding:8px 10px 4px}
+.sb-h h3{font-size:9px;text-transform:uppercase;color:rgba(255,255,255,.3);letter-spacing:1px}
+.sb-h button{background:none;border:none;color:rgba(255,255,255,.3);cursor:pointer;font-size:14px;padding:2px 4px;border-radius:4px}
+.sb-h button:hover{color:#fff;background:rgba(255,255,255,.05)}
+.sb-l{flex:1;overflow-y:auto;padding:2px 5px}
+.sb-i{display:flex;align-items:center;gap:4px;padding:5px 7px;border-radius:5px;cursor:pointer;font-size:12px;border:1px solid transparent}
+.sb-i:hover{background:rgba(255,255,255,.04)}
+.sb-i.on{background:rgba(255,255,255,.06);border-color:rgba(255,255,255,.08)}
+.sb-i .nm{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sb-i .de{color:rgba(255,255,255,.2);cursor:pointer;display:none;padding:0 3px;border-radius:3px}
+.sb-i:hover .de{display:block}
+.sb-i .de:hover{color:#e74c3c;background:rgba(231,76,60,.1)}
+.ct{flex:1;display:flex;flex-direction:column;min-height:0}
+.tb{display:flex;align-items:center;gap:3px;padding:4px 10px;flex-wrap:wrap;border-bottom:1px solid rgba(255,255,255,.06);background:rgba(0,0,0,.15);flex-shrink:0}
+.tb button,.tb select{background:transparent;border:1px solid transparent;border-radius:4px;color:rgba(255,255,255,.5);cursor:pointer;height:26px;padding:0 5px;font-size:11px;font-family:inherit;transition:.1s}
+.tb button{min-width:26px;display:flex;align-items:center;justify-content:center}
+.tb button:hover,.tb select:hover{background:rgba(255,255,255,.05);color:#fff}
+.tb select{min-width:50px;color:rgba(255,255,255,.7);outline:none}
+.tb select option{background:#1a1a2a;color:#eee}
+.tb .gr{display:flex;gap:1px;padding:0 3px;border-right:1px solid rgba(255,255,255,.06);margin-right:2px}
+.tb .gr:last-child{border-right:none}
+.ed-w{flex:1;overflow-y:auto;min-height:0}
+.ed{max-width:760px;margin:0 auto;padding:20px 24px 200px;min-height:100%;outline:none;word-wrap:break-word;line-height:1.7}
+.ed h1{font-size:24px;margin:12px 0 6px}
+.ed h2{font-size:19px;margin:10px 0 5px}
+.ed ul,ol{padding-left:20px}
+.ed hr{border:none;border-top:1px solid rgba(255,255,255,.08);margin:12px 0}
+.ed pre{background:rgba(255,255,255,.04);padding:10px;border-radius:6px;font-size:12px;font-family:monospace}
+.ed blockquote{border-left:3px solid #1db954;padding:4px 12px;margin:6px 0;color:rgba(255,255,255,.5);background:rgba(255,255,255,.02);border-radius:0 5px 5px 0}
+.em{display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:60px 20px;color:rgba(255,255,255,.4)}
+.em h3{font-size:15px;color:rgba(255,255,255,.7);margin-bottom:4px}
+.em button{margin-top:6px;padding:6px 14px;background:#1db954;color:#000;border:none;border-radius:6px;cursor:pointer;font-weight:600;font-size:12px;font-family:inherit}
+/* modals */
+.mo{position:fixed;top:0;left:0;width:100%;height:100%;z-index:800;display:none;align-items:center;justify-content:center}
+.mo.on{display:flex}
+.mo .bg{position:absolute;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.5)}
+.mo .mdl{position:relative;background:#101018;border:1px solid rgba(255,255,255,.08);border-radius:12px;padding:20px;min-width:300px;max-width:90%;max-height:85vh;overflow-y:auto}
+.mo .mdl h2{font-size:15px;margin-bottom:10px}
+.mo .mdl label{font-size:10px;color:rgba(255,255,255,.4);display:block;margin:8px 0 3px}
+.mo .mdl input{width:100%;padding:6px 9px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:6px;color:#eee;font-size:12px;font-family:inherit;outline:none}
+.mo .mdl input:focus{border-color:#1db954}
+.mo .btns{display:flex;gap:5px;margin-top:12px;justify-content:flex-end}
+.mo .btns button{padding:5px 14px;border-radius:6px;border:none;cursor:pointer;font-size:11px;font-weight:600;font-family:inherit}
+.mo .btns .ok{background:#1db954;color:#000}
+.mo .btns .no{background:rgba(255,255,255,.06);color:rgba(255,255,255,.5)}
+.cl-g{display:grid;grid-template-columns:repeat(6,1fr);gap:4px;margin:6px 0}
+.cl-g div{height:26px;border-radius:4px;cursor:pointer;border:2px solid transparent}
+.cl-g div.on{border-color:#1db954}
+</style>
+</head>
+<body>
+<div class="top">
+  <h1>KaferNotes</h1>
+  <div class="sp"></div>
+  <button onclick="abrirFondo()">Fondo</button>
+  <button onclick="exportar()">Exportar</button>
+</div>
+<div class="lyt">
+  <aside class="sb">
+    <div class="sb-h"><h3>Notas</h3><button onclick="nueva()">+</button></div>
+    <div class="sb-l" id="lista"></div>
+  </aside>
+  <main class="ct">
+    <div class="tb" id="toolbar">
+      <div class="gr">
+        <button onclick="cmd('bold')"><b>B</b></button>
+        <button onclick="cmd('italic')"><i>I</i></button>
+        <button onclick="cmd('underline')"><u>U</u></button>
+        <button onclick="cmd('strikeThrough')"><s>S</s></button>
+      </div>
+      <div class="gr">
+        <select onchange="cmd('fontName',this.value)"><option>Inter</option><option>Arial</option><option>Courier New</option><option>Georgia</option><option>monospace</option></select>
+        <select onchange="cmd('fontSize',this.value)"><option value="3">Normal</option><option value="4">Grande</option><option value="5">+Grande</option></select>
+      </div>
+      <div class="gr">
+        <button onclick="cmd('insertOrderedList')">1.</button>
+        <button onclick="cmd('insertUnorderedList')">*</button>
+        <button onclick="cmd('justifyLeft')">Izq</button>
+        <button onclick="cmd('justifyCenter')">Cen</button>
+      </div>
+      <div class="gr">
+        <button onclick="cmd('formatBlock','<h1>')">H1</button>
+        <button onclick="cmd('formatBlock','<h2>')">H2</button>
+        <button onclick="cmd('formatBlock','<blockquote>')">Cita</button>
+        <button onclick="cmd('formatBlock','<pre>')">Cod</button>
+      </div>
+      <div class="gr">
+        <button onclick="insertarSep()">---</button>
+        <button onclick="abrirTL()">Timeline</button>
+        <button onclick="abrirDW()">Dibujo</button>
+        <button onclick="modoScript()">Guion</button>
+      </div>
+    </div>
+    <div class="ed-w" id="edw">
+      <div class="em" id="empty">
+        <h3>No hay notas</h3>
+        <button onclick="nueva()">Crear nota</button>
+      </div>
+      <div class="ed" id="ed" contenteditable="true" style="display:none"></div>
+    </div>
+  </main>
+</div>
+
+<div class="mo" id="bgMo">
+  <div class="bg" onclick="cerrarFondo()"></div>
+  <div class="mdl">
+    <h2>Color de fondo</h2>
+    <div class="cl-g" id="bgGrid"></div>
+    <label>Personalizado</label>
+    <input id="bgInp" onchange="cambiarFondo(this.value)">
+    <div class="btns"><button class="ok" onclick="cerrarFondo()">Cerrar</button></div>
+  </div>
+</div>
+
+<div class="mo" id="tlMo">
+  <div class="bg" onclick="cerrarTL()"></div>
+  <div class="mdl">
+    <h2>Linea de tiempo</h2>
+    <div id="tlPrev" style="min-height:50px;padding:8px 0;font-size:12px;color:rgba(255,255,255,.3)">Sin eventos</div>
+    <label>Nuevo evento</label>
+    <div style="display:flex;gap:5px;flex-wrap:wrap">
+      <input id="tlF" placeholder="Fecha" style="width:80px">
+      <input id="tlT" placeholder="Descripcion" style="flex:1">
+      <button onclick="agregarEvento()" style="background:#1db954;color:#000;border:none;border-radius:5px;padding:4px 10px;cursor:pointer;font-weight:600">+</button>
+    </div>
+    <div class="btns">
+      <button class="no" onclick="cerrarTL()">Cancelar</button>
+      <button class="ok" onclick="insertarTL()">Insertar</button>
+    </div>
+  </div>
+</div>
+
+<div class="mo" id="dwMo">
+  <div class="bg" onclick="cerrarDW()"></div>
+  <div class="mdl" style="min-width:320px">
+    <h2>Dibujo</h2>
+    <div style="display:flex;gap:5px;align-items:center;margin-bottom:8px;flex-wrap:wrap">
+      <button onclick="dwModo('lapiz',this)" style="background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.08);border-radius:4px;color:rgba(255,255,255,.5);cursor:pointer;padding:3px 8px;font-size:11px">Lapiz</button>
+      <button onclick="dwModo('goma',this)" style="background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.08);border-radius:4px;color:rgba(255,255,255,.5);cursor:pointer;padding:3px 8px;font-size:11px">Goma</button>
+      <input type="range" min="1" max="20" value="3" oninput="dwTam=+this.value" style="width:50px">
+      <input type="color" value="#000000" oninput="dwCol=this.value" style="width:22px;height:22px;border-radius:50%;border:1px solid rgba(255,255,255,.08);padding:0;cursor:pointer;background:none">
+      <button onclick="dwLimpiar()" style="background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.08);border-radius:4px;color:rgba(255,255,255,.5);cursor:pointer;padding:3px 8px;font-size:11px">Limpiar</button>
+    </div>
+    <canvas id="dwCv" style="width:100%;height:280px;background:#fff;border-radius:6px;cursor:crosshair;display:block;touch-action:none"></canvas>
+    <div class="btns">
+      <button class="no" onclick="cerrarDW()">Cancelar</button>
+      <button class="ok" onclick="insertarDW()">Insertar</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ====== DATOS ======
+var notas=[],activa=null
+var KEY='kf_notas'
+var COLORES=['#0a0a0f','#12121a','#1a1a2e','#16213e','#0f3460','#533483','#2d1b69','#1b1b1b','#2b2b2b','#3d3d3d','#1b263b','#2c3e50','#1a3a2a','#2d1e1e','#0a1628']
+
+function idunica(){return Date.now().toString(36)+Math.random().toString(36).slice(2,6)}
+
+function cargar(){
+  try{
+    var d=JSON.parse(localStorage.getItem(KEY))
+    if(d){notas=d.notas||[];activa=d.activa||null}
+  }catch(e){}
+  if(!notas.length){
+    var id=idunica();notas.push({id:id,titulo:'Nueva nota',contenido:'<p><br></p>',fondo:'#0a0a0f'});activa=id
+  }
+  if(!notas.find(function(n){return n.id===activa}))activa=notas[0].id
+}
+
+function guardar(){
+  var ed=document.getElementById('ed')
+  var n=notas.find(function(x){return x.id===activa})
+  if(n&&ed.style.display!=='none')n.contenido=ed.innerHTML
+  try{localStorage.setItem(KEY,JSON.stringify({notas:notas,activa:activa}))}catch(e){}
+}
+
+function notaActual(){return notas.find(function(n){return n.id===activa})}
+
+function esc(s){var d=document.createElement('div');d.textContent=s;return d.innerHTML}
+
+// ====== NOTAS ======
+function render(){
+  var n=notaActual(),ed=document.getElementById('ed'),em=document.getElementById('empty')
+  var sl=document.getElementById('lista')
+  if(!notas.length){
+    sl.innerHTML='<div style="padding:10px;text-align:center;font-size:11px;color:rgba(255,255,255,.2)">Sin notas</div>'
+    ed.style.display='none';em.style.display='flex';return
+  }
+  sl.innerHTML=notas.map(function(x){
+    return '<div class="sb-i'+(x.id===activa?' on':'')+'" onclick="sel(\''+x.id+'\')">'+
+      '<span class="nm">'+esc(x.titulo)+'</span>'+
+      '<span class="de" onclick="event.stopPropagation();borrar(\''+x.id+'\',event)">x</span></div>'
+  }).join('')
+  if(!n){ed.style.display='none';em.style.display='flex';return}
+  em.style.display='none';ed.style.display='block'
+  ed.style.background=n.fondo||'#0a0a0f'
+  ed.innerHTML=n.contenido||'<p><br></p>'
+  ed.contentEditable='true'
+}
+
+function sel(id){
+  if(id===activa)return
+  guardar();activa=id;render()
+}
+
+function nueva(){
+  var id=idunica()
+  notas.push({id:id,titulo:'Nueva nota',contenido:'<p><br></p>',fondo:'#0a0a0f'})
+  activa=id;guardar();render()
+  var t=prompt('Nombre de la nota:')
+  if(t&&t.trim()){var n=notas.find(function(x){return x.id===activa});if(n)n.titulo=t.trim();guardar();render()}
+  document.getElementById('ed').focus()
+}
+
+function borrar(id,e){
+  if(!confirm('Eliminar nota?'))return
+  notas=notas.filter(function(n){return n.id!==id})
+  if(activa===id)activa=notas.length?notas[notas.length-1].id:null
+  guardar();render()
+}
+
+// ====== TOOLBAR ======
+function cmd(c,v){document.execCommand(c,false,v);document.getElementById('ed').focus();guardar()}
+
+// ====== SEPARADOR ======
+function insertarSep(){
+  var ed=document.getElementById('ed'),hr=document.createElement('hr')
+  ed.focus()
+  var s=window.getSelection()
+  if(s&&s.rangeCount){var r=s.getRangeAt(0);r.deleteContents();r.insertNode(hr);r.setStartAfter(hr);r.collapse(true)}
+  else ed.appendChild(hr)
+  guardar()
+}
+
+// ====== TIMELINE ======
+var evts=[]
+function abrirTL(){
+  evts=[]
+  document.getElementById('tlPrev').innerHTML='<span style="color:rgba(255,255,255,.2)">Sin eventos</span>'
+  document.getElementById('tlMo').classList.add('on')
+}
+
+function cerrarTL(){document.getElementById('tlMo').classList.remove('on')}
+
+function agregarEvento(){
+  var f=document.getElementById('tlF').value.trim(),t=document.getElementById('tlT').value.trim()
+  if(!f&&!t)return
+  evts.push({fecha:f,texto:t})
+  document.getElementById('tlF').value='';document.getElementById('tlT').value=''
+  var html='<div style="display:flex;gap:0;overflow-x:auto;padding:10px 0;position:relative">'
+  html+='<div style="position:absolute;top:28px;left:10px;right:10px;height:2px;background:rgba(255,255,255,.08)"></div>'
+  for(var i=0;i<evts.length;i++){
+    html+='<div style="display:flex;flex-direction:column;align-items:center;min-width:80px;flex-shrink:0;padding:0 6px">'
+    html+='<div style="width:10px;height:10px;border-radius:50%;background:#1db954;z-index:1"></div>'
+    html+='<div style="font-size:8px;color:rgba(255,255,255,.3);margin-top:8px;font-weight:600">'+esc(evts[i].fecha||'')+'</div>'
+    html+='<div style="font-size:10px;color:rgba(255,255,255,.4);margin-top:1px;text-align:center">'+esc(evts[i].texto||'')+'</div>'
+    html+='<span style="font-size:9px;color:rgba(255,255,255,.2);cursor:pointer;margin-top:2px" onclick="evts.splice('+i+',1);agregarEvento();agregarEvento()">x</span>'
+    html+='</div>'
+  }
+  html+='</div>'
+  document.getElementById('tlPrev').innerHTML=html
+}
+
+function insertarTL(){
+  if(!evts.length){cerrarTL();return}
+  var div=document.createElement('div')
+  div.style.cssText='background:rgba(255,255,255,.03);border-radius:6px;padding:12px;margin:8px 0;overflow-x:auto'
+  var h='<div style="display:flex;gap:0;position:relative;padding:10px 0 0">'
+  h+='<div style="position:absolute;top:28px;left:10px;right:10px;height:2px;background:rgba(255,255,255,.08)"></div>'
+  for(var i=0;i<evts.length;i++){
+    h+='<div style="display:flex;flex-direction:column;align-items:center;min-width:80px;flex-shrink:0;padding:0 6px">'
+    h+='<div style="width:10px;height:10px;border-radius:50%;background:#1db954;z-index:1"></div>'
+    h+='<div style="font-size:8px;color:rgba(255,255,255,.3);margin-top:8px;font-weight:600">'+esc(evts[i].fecha||'')+'</div>'
+    h+='<div style="font-size:10px;color:rgba(255,255,255,.4);margin-top:1px;text-align:center">'+esc(evts[i].texto||'')+'</div>'
+    h+='</div>'
+  }
+  h+='</div>';div.innerHTML=h
+  var ed=document.getElementById('ed');ed.focus()
+  var s=window.getSelection()
+  if(s&&s.rangeCount){var r=s.getRangeAt(0);r.deleteContents();r.insertNode(div);r.setStartAfter(div);r.collapse(true)}
+  else ed.appendChild(div)
+  guardar();cerrarTL();ed.focus()
+}
+
+// ====== DIBUJO ======
+var dwCtx=null,dwPin=false,dwTam=3,dwCol='#000000',dwMod='lapiz'
+
+function abrirDW(){
+  document.getElementById('dwMo').classList.add('on')
+  setTimeout(function(){
+    var cv=document.getElementById('dwCv')
+    var w=cv.parentElement.clientWidth-40
+    cv.width=w;cv.height=280
+    dwCtx=cv.getContext('2d')
+    dwCtx.fillStyle='#ffffff';dwCtx.fillRect(0,0,w,280)
+    dwCtx.lineCap='round'
+    cv.onmousedown=function(e){dwPin=true;var p=pos(e);dwCtx.beginPath();dwCtx.moveTo(p.x,p.y)}
+    cv.onmousemove=function(e){if(!dwPin)return;var p=pos(e);dwCtx.strokeStyle=dwMod==='goma'?'#ffffff':dwCol;dwCtx.lineWidth=dwTam;dwCtx.lineTo(p.x,p.y);dwCtx.stroke()}
+    cv.onmouseup=function(){dwPin=false}
+    cv.onmouseleave=function(){dwPin=false}
+    cv.ontouchstart=function(e){e.preventDefault();var t=e.touches[0];dwPin=true;var p={x:t.clientX-cv.getBoundingClientRect().left,y:t.clientY-cv.getBoundingClientRect().top};dwCtx.beginPath();dwCtx.moveTo(p.x,p.y)}
+    cv.ontouchmove=function(e){e.preventDefault();if(!dwPin)return;var t=e.touches[0];var p={x:t.clientX-cv.getBoundingClientRect().left,y:t.clientY-cv.getBoundingClientRect().top};dwCtx.strokeStyle=dwMod==='goma'?'#ffffff':dwCol;dwCtx.lineWidth=dwTam;dwCtx.lineTo(p.x,p.y);dwCtx.stroke()}
+    cv.ontouchend=function(){dwPin=false}
+  },100)
+}
+
+function cerrarDW(){document.getElementById('dwMo').classList.remove('on')}
+
+function pos(e){var r=document.getElementById('dwCv').getBoundingClientRect();return{x:e.clientX-r.left,y:e.clientY-r.top}}
+
+function dwModo(m,btn){
+  dwMod=m
+  var p=btn.parentElement
+  p.querySelectorAll('button').forEach(function(b){b.style.background='rgba(255,255,255,.06)'})
+  btn.style.background='rgba(29,185,84,.2)';btn.style.color='#fff'
+}
+
+function dwLimpiar(){
+  var cv=document.getElementById('dwCv')
+  dwCtx.fillStyle='#ffffff';dwCtx.fillRect(0,0,cv.width,cv.height)
+}
+
+function insertarDW(){
+  var data=document.getElementById('dwCv').toDataURL()
+  var div=document.createElement('div')
+  div.style.cssText='background:#fff;border-radius:6px;margin:8px 0;overflow:hidden'
+  div.innerHTML='<img src="'+data+'" style="width:100%;display:block">'
+  var ed=document.getElementById('ed');ed.focus()
+  var s=window.getSelection()
+  if(s&&s.rangeCount){var r=s.getRangeAt(0);r.deleteContents();r.insertNode(div);r.setStartAfter(div);r.collapse(true)}
+  else ed.appendChild(div)
+  guardar();cerrarDW();ed.focus()
+}
+
+// ====== GUION ======
+function modoScript(){
+  var ed=document.getElementById('ed'),s=window.getSelection()
+  if(!s||!s.rangeCount)return
+  var n=s.focusNode
+  while(n&&n.parentElement!==ed)n=n.parentElement
+  if(!n)return
+  if(n.tagName==='PRE'&&n.className==='scr'){
+    var p=document.createElement('p');p.innerHTML=n.innerHTML
+    n.parentNode.replaceChild(p,n)
+  }else{
+    var pre=document.createElement('pre');pre.className='scr'
+    pre.style.cssText='font-family:Courier New,monospace;font-size:12px;line-height:1.8;background:rgba(255,255,255,.03);padding:10px;border-radius:6px;margin:4px 0'
+    pre.innerHTML=n.innerHTML
+    n.parentNode.replaceChild(pre,n)
+    s.removeAllRanges();var r=document.createRange();r.setStart(pre,0);r.collapse(true);s.addRange(r)
+  }
+  guardar();ed.focus()
+}
+
+// ====== FONDO ======
+function abrirFondo(){
+  var n=notaActual()
+  if(!n)return
+  var g=document.getElementById('bgGrid')
+  g.innerHTML=COLORES.map(function(c){return '<div style="background:'+c+'" onclick="cambiarFondo(\''+c+'\')" class="'+(n.fondo===c?'on':'')+'"></div>'}).join('')
+  document.getElementById('bgInp').value=n.fondo||''
+  document.getElementById('bgMo').classList.add('on')
+}
+
+function cerrarFondo(){document.getElementById('bgMo').classList.remove('on')}
+
+function cambiarFondo(c){
+  var n=notaActual();if(!n)return;n.fondo=c
+  document.getElementById('ed').style.background=c
+  document.getElementById('bgInp').value=c
+  document.querySelectorAll('#bgGrid div').forEach(function(el){el.className=el.style.background===c?'on':''})
+  guardar()
+}
+
+// ====== EXPORTAR ======
+function exportar(){
+  var n=notaActual();if(!n)return
+  var d=document.createElement('div');d.innerHTML=n.contenido||''
+  var t=n.titulo+'\n'+'='.repeat(n.titulo.length)+'\n\n'+(d.textContent||d.innerText||'')
+  var a=document.createElement('a');a.href=URL.createObjectURL(new Blob([t],{type:'text/plain'}));a.download=(n.titulo||'nota')+'.txt';a.click()
+}
+
+// ====== AUTO ======
+setInterval(guardar,5000)
+
+// ====== INICIO ======
+cargar();render()
+</script>
+</body>
+</html>
