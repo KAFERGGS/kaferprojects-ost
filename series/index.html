@@ -659,9 +659,9 @@ function render(){
   document.getElementById('ctOVA').textContent=tipos.OVA||0
 
   var titulo='Todas',sub=entries.length+' entradas'
-  if(filter==='top'){titulo='Top 20';sub='Tu seleccion manual'}
+  if(filter==='top'){titulo='Top 20 <button onclick="exportarTop()" style="font-size:10px;padding:3px 10px;border-radius:6px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.05);color:rgba(255,255,255,.3);cursor:pointer;font-family:inherit;font-weight:600;transition:.2s;vertical-align:middle" onmouseover="this.style.color=\'#fff\';this.style.borderColor=\'var(--prim)\'" onmouseout="this.style.color=\'rgba(255,255,255,.3)\';this.style.borderColor=\'rgba(255,255,255,.05)\'">📷 Exportar imagen</button>';sub='Tu seleccion manual'}
   else if(filter!=='all'){titulo=filter;sub=(tipos[filter]||0)+' entradas'}
-  document.getElementById('ctTitle').textContent=titulo
+  document.getElementById('ctTitle').innerHTML=titulo
   document.getElementById('ctSub').textContent=sub
 
   var content=document.getElementById('ctContent')
@@ -782,6 +782,124 @@ function sacarDelTop(id){
   if(!e)return
   delete e.topPos
   guardar();render()
+}
+
+// ====== EXPORT IMAGE ======
+function exportarTop(){
+  var top=entries.filter(function(e){return e.topPos>0}).sort(function(a,b){return a.topPos-b.topPos}).slice(0,20)
+  if(!top.length){alert('No hay nada en tu Top para exportar');return}
+  var btn=document.querySelector('#ctTitle button')
+  if(btn){btn.textContent='⏳ Generando...';btn.disabled=true}
+  var W=900,H=Math.max(1200,380+Math.max(top.length-3,0)*58),pad=40
+  var canvas=document.createElement('canvas');canvas.width=W;canvas.height=H
+  var ctx=canvas.getContext('2d')
+  function draw(){
+    // Background
+    var grad=ctx.createLinearGradient(0,0,0,H)
+    grad.addColorStop(0,'#08081a');grad.addColorStop(0.5,'#0f0a24');grad.addColorStop(1,'#08081a')
+    ctx.fillStyle=grad;ctx.fillRect(0,0,W,H)
+    // Subtle dots
+    ctx.fillStyle='rgba(255,255,255,.012)'
+    for(var yy=0;yy<H;yy+=30){for(var xx=0;xx<W;xx+=30){ctx.beginPath();ctx.arc(xx,yy,1,0,Math.PI*2);ctx.fill()}}
+    // Header bar
+    ctx.fillStyle='rgba(255,255,255,.03)';ctx.fillRect(0,0,W,110)
+    ctx.fillStyle='#fff';ctx.font='bold 32px Inter,sans-serif';ctx.textAlign='center'
+    ctx.fillText('Mi Top 20',W/2,50)
+    ctx.fillStyle='rgba(255,255,255,.12)';ctx.font='14px Inter,sans-serif'
+    ctx.fillText('KaferSeries',W/2,78)
+    // Decorative line
+    var lw=120;ctx.strokeStyle='rgba(255,255,255,.04)';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(W/2-lw,92);ctx.lineTo(W/2+lw,92);ctx.stroke()
+    var yPos=140
+    // Top 3 - big cards
+    var bigW=230,bigH=150,bigGap=35,bigStart=(W-3*bigW-2*bigGap)/2
+    var medals=['🥇','🥈','🥉'];var mColors=['#ffd700','#c0c0c0','#cd7f32'];var mTitles=['ORO','PLATA','BRONCE']
+    for(var i=0;i<Math.min(3,top.length);i++){
+      var e=top[i],x=bigStart+i*(bigW+bigGap)
+      // Card shadow
+      ctx.fillStyle='rgba(0,0,0,.3)';ctx.beginPath();ctx.roundRect(x+3,yPos+3,bigW,bigH,14);ctx.fill()
+      // Card bg
+      ctx.fillStyle='rgba(255,255,255,'+(0.04+i*0.005)+')'
+      ctx.beginPath();ctx.roundRect(x,yPos,bigW,bigH,14);ctx.fill()
+      ctx.strokeStyle=mColors[i]+'50';ctx.lineWidth=1.5;ctx.beginPath();ctx.roundRect(x,yPos,bigW,bigH,14);ctx.stroke()
+      // Medal
+      ctx.font='22px sans-serif';ctx.textAlign='center'
+      ctx.fillText(medals[i],x+bigW/2,yPos-10)
+      ctx.fillStyle=mColors[i];ctx.font='bold 9px Inter,sans-serif';ctx.textAlign='center'
+      ctx.fillText(mTitles[i],x+bigW/2,yPos+5)
+      // Image
+      var imgX=x+12,imgY=yPos+16,imgW=58,imgH=82
+      ctx.fillStyle='rgba(0,0,0,.2)';ctx.beginPath();ctx.roundRect(imgX,imgY,imgW,imgH,6);ctx.fill()
+      var img=e._img
+      if(img){ctx.save();ctx.beginPath();ctx.roundRect(imgX,imgY,imgW,imgH,6);ctx.clip();ctx.drawImage(img,imgX,imgY,imgW,imgH);ctx.restore()}
+      // Title
+      ctx.fillStyle='#fff';ctx.font='bold 14px Inter,sans-serif';ctx.textAlign='left'
+      ctx.fillText((e.titulo||'?').slice(0,18),x+80,imgY+28)
+      ctx.fillStyle='rgba(255,255,255,.25)';ctx.font='10px Inter,sans-serif'
+      ctx.fillText(e.tipo||'',x+80,imgY+46)
+      // Rating bar
+      var barX=x+80,barY=imgY+60,barW=bigW-100,barH=6
+      var pct=Math.min((e.rating||0)/10,1)
+      ctx.fillStyle='rgba(255,255,255,.05)';ctx.beginPath();ctx.roundRect(barX,barY,barW,barH,3);ctx.fill()
+      ctx.fillStyle=mColors[i];ctx.beginPath();ctx.roundRect(barX,barY,barW*pct,barH,3);ctx.fill()
+      ctx.fillStyle=mColors[i];ctx.font='bold 18px Inter,sans-serif';ctx.textAlign='right'
+      ctx.fillText(Math.round(pct*100)+'%',x+bigW-12,imgY+28)
+    }
+    yPos+=bigH+35
+    // 4-20 rows
+    for(var i=3;i<top.length;i++){
+      var e=top[i],x=pad
+      var rowH=50+(e._img?0:0)
+      // Row
+      ctx.fillStyle='rgba(255,255,255,.012)'
+      ctx.beginPath();ctx.roundRect(x,yPos,W-2*pad,rowH,8);ctx.fill()
+      ctx.strokeStyle='rgba(255,255,255,.025)';ctx.lineWidth=1;ctx.beginPath();ctx.roundRect(x,yPos,W-2*pad,rowH,8);ctx.stroke()
+      // Position circle
+      var circleY=yPos+rowH/2
+      ctx.fillStyle='rgba(255,255,255,.04)'
+      ctx.beginPath();ctx.arc(x+28,circleY,14,0,Math.PI*2);ctx.fill()
+      ctx.fillStyle='rgba(255,255,255,.25)';ctx.font='bold 11px Inter,sans-serif';ctx.textAlign='center'
+      ctx.fillText(''+(i+1),x+28,circleY+4)
+      // Small image
+      if(e._img){
+        ctx.save();ctx.beginPath();ctx.roundRect(x+50,yPos+6,26,rowH-12,4);ctx.clip()
+        ctx.drawImage(e._img,x+50,yPos+6,26,rowH-12);ctx.restore()
+      }
+      // Title
+      ctx.fillStyle='#fff';ctx.font='bold 12px Inter,sans-serif';ctx.textAlign='left'
+      ctx.fillText((e.titulo||'?').slice(0,40),x+86,yPos+rowH/2-3)
+      ctx.fillStyle='rgba(255,255,255,.2)';ctx.font='9px Inter,sans-serif'
+      ctx.fillText(e.tipo||'',x+86,yPos+rowH/2+13)
+      // Rating bar mini
+      var pct2=Math.min((e.rating||0)/10,1)
+      var rBarX=x+86,rBarY=yPos+rowH-8,rBarW=130,rBarH=3
+      ctx.fillStyle='rgba(255,255,255,.04)';ctx.beginPath();ctx.roundRect(rBarX,rBarY,rBarW,rBarH,2);ctx.fill()
+      ctx.fillStyle='#ff6b9d';ctx.beginPath();ctx.roundRect(rBarX,rBarY,rBarW*pct2,rBarH,2);ctx.fill()
+      // Percentage
+      ctx.fillStyle='#ff6b9d';ctx.font='bold 15px Inter,sans-serif';ctx.textAlign='right'
+      ctx.fillText(Math.round(pct2*100)+'%',W-pad-12,circleY+5)
+      yPos+=rowH+7
+    }
+    // Footer
+    ctx.fillStyle='rgba(255,255,255,.02)';ctx.fillRect(0,H-32,W,32)
+    ctx.fillStyle='rgba(255,255,255,.05)';ctx.font='10px Inter,sans-serif';ctx.textAlign='center'
+    ctx.fillText('KaferSeries — creado por KaferGGS',W/2,H-10)
+    // Download
+    var link=document.createElement('a')
+    link.download='mi-top-20-kafer.png'
+    canvas.toBlob(function(blob){link.href=URL.createObjectURL(blob);link.click();if(btn){btn.textContent='📷 Exportar imagen';btn.disabled=false}},'image/png')
+  }
+  // Pre-load images
+  var pending=0
+  top.forEach(function(e){
+    if(!e.img)return
+    pending++
+    var img=new Image()
+    img.crossOrigin='anonymous'
+    img.onload=function(){e._img=img;pending--;if(!pending)draw()}
+    img.onerror=function(){pending--;if(!pending)draw()}
+    img.src=e.img
+  })
+  if(!pending)setTimeout(draw,100)
 }
 
 // ====== TOP PICKER ======
