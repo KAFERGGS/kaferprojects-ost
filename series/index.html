@@ -134,6 +134,9 @@ body{font-family:'Inter',sans-serif;overflow:hidden;background:var(--bg,#0a0a1a)
 .tl-i .act button:nth-child(3){font-size:9px;padding:4px 5px}
 .tl-i .act button:nth-child(2):hover{color:#4ade80}
 .tl-i .act button:nth-child(3):hover{color:#f87171}
+.tl-i .act button:nth-child(4):hover{color:#e74c3c!important}
+.tl-i.empty{border:1px dashed rgba(255,255,255,.04);background:rgba(255,255,255,.005)}
+.tl-i.empty:hover{border-color:var(--prim);background:rgba(255,255,255,.015)}
 
 /* ====== SEARCH OVERLAY ====== */
 .so{position:fixed;top:0;left:0;width:100%;height:100%;z-index:500;display:none;backdrop-filter:blur(30px);-webkit-backdrop-filter:blur(30px)}
@@ -224,6 +227,22 @@ body{font-family:'Inter',sans-serif;overflow:hidden;background:var(--bg,#0a0a1a)
 .am .mdl .btns .no{background:rgba(255,255,255,.05);color:rgba(255,255,255,.3)}
 .am .mdl .btns .no:hover{background:rgba(255,255,255,.08);color:#fff}
 
+/* ====== PICKER MODAL ====== */
+.pm{position:fixed;top:0;left:0;width:100%;height:100%;z-index:650;display:none;align-items:center;justify-content:center}
+.pm.on{display:flex;animation:fi .2s}
+.pm .bg{position:absolute;inset:0;background:rgba(0,0,0,.4);backdrop-filter:blur(20px)}
+.pm .mdl{position:relative;background:rgba(16,16,24,.92);border:1px solid rgba(255,255,255,.05);border-radius:16px;padding:20px;max-width:400px;width:90%;max-height:70vh;display:flex;flex-direction:column;backdrop-filter:blur(30px);animation:su .25s}
+.pm .mdl h2{font-size:15px;font-weight:700;margin-bottom:12px}
+.pm .mdl h2 span{color:var(--prim)}
+.pm .mdl .pi{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:9px;cursor:pointer;transition:.15s}
+.pm .mdl .pi:hover{background:rgba(255,255,255,.04)}
+.pm .mdl .pi .im{width:28px;height:40px;border-radius:4px;overflow:hidden;flex-shrink:0;background:rgba(0,0,0,.2);display:flex;align-items:center;justify-content:center}
+.pm .mdl .pi .im img{width:100%;height:100%;object-fit:cover}
+.pm .mdl .pi .nf{flex:1;min-width:0}
+.pm .mdl .pi .nf .nm{font-size:12px;font-weight:600}
+.pm .mdl .pi .nf .tp{font-size:10px;color:rgba(255,255,255,.2);margin-top:1px}
+#pickerList{flex:1;overflow-y:auto;min-height:0;margin:0 -4px;padding:0 4px}
+
 /* ====== ANIMATIONS ====== */
 @keyframes fi{from{opacity:0}to{opacity:1}}
 @keyframes su{from{opacity:0;transform:translateY(16px) scale(.97)}to{opacity:1;transform:translateY(0) scale(1)}}
@@ -312,6 +331,17 @@ body{font-family:'Inter',sans-serif;overflow:hidden;background:var(--bg,#0a0a1a)
   </div>
 </div>
 
+<!-- TOP PICKER -->
+<div class="pm" id="pickerModal">
+  <div class="bg" onclick="cerrarPicker()"></div>
+  <div class="mdl">
+    <h2>Añadir al Top <span id="pickerPos">#1</span></h2>
+    <p style="font-size:11px;color:rgba(255,255,255,.2);margin:-8px 0 10px">Selecciona una serie para colocarla en esta posicion</p>
+    <div id="pickerList"></div>
+    <div class="btns" style="margin-top:10px"><button class="no" onclick="cerrarPicker()">Cancelar</button></div>
+  </div>
+</div>
+
 <!-- DETAIL -->
 <div class="dm" id="detailModal">
   <div class="bg" onclick="cerrarDetalle()"></div>
@@ -334,10 +364,11 @@ body{font-family:'Inter',sans-serif;overflow:hidden;background:var(--bg,#0a0a1a)
         #ratingSlider::-webkit-slider-thumb{-webkit-appearance:none;width:26px;height:26px;border-radius:50%;background:var(--prim);cursor:pointer;box-shadow:0 0 25px color-mix(in srgb,var(--prim) 40%,transparent)}
         #ratingSlider::-moz-range-thumb{width:26px;height:26px;border-radius:50%;background:var(--prim);cursor:pointer;border:none}
       </style>
-      <label>Posicion en Top (0 = fuera del top)</label>
+      <label>Top personal (0 = fuera del top)</label>
       <div style="display:flex;gap:6px;align-items:center;margin:4px 0">
-        <input type="number" id="detTopPos" min="0" max="20" value="0" onchange="ponerTopPos(this.value)" style="width:70px;padding:6px 8px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.05);border-radius:8px;color:#fff;font-size:13px;font-weight:700;font-family:inherit;outline:none;text-align:center">
-        <span style="font-size:10px;color:rgba(255,255,255,.15)">/ 20</span>
+        <select id="detTopPos" onchange="ponerTopPos(this.value)" style="flex:1;padding:7px 10px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.05);border-radius:8px;color:#fff;font-size:12px;font-weight:600;font-family:inherit;outline:none;cursor:pointer">
+          <option value="0">Fuera del Top</option>
+        </select>
       </div>
       <label>Descripcion / Notas</label>
       <textarea id="detDesc" placeholder="Tus impresiones..." oninput="guardarDetalle()"></textarea>
@@ -396,7 +427,7 @@ function cargar(){
   var needsPos=entries.filter(function(e){return e.rating>0&&!e.topPos})
   if(needsPos.length){
     needsPos.sort(function(a,b){return(b.rating||0)-(a.rating||0)})
-    needsPos.forEach(function(e,i){e.topPos=i+1})
+    needsPos.forEach(function(e){e.topPos=topPosNext()})
     guardar()
   }
 }
@@ -559,7 +590,14 @@ function abrirDetalle(id){
   document.getElementById('detImgUrl').value=e.img||''
   document.getElementById('ratingSlider').value=e.rating||0
   document.getElementById('ratingVal').textContent=e.rating?e.rating.toFixed(1):'-'
-  document.getElementById('detTopPos').value=e.topPos||0
+  var sel=document.getElementById('detTopPos')
+  sel.innerHTML='<option value="0">Fuera del Top</option>'
+  for(var i=1;i<=20;i++){
+    var o=document.createElement('option')
+    o.value=i;o.textContent='#'+i+(entries.find(function(x){return x.topPos===i&&x.id!==e.id})?' (ocupado)':'')
+    if(e.topPos===i)o.selected=true
+    sel.appendChild(o)
+  }
   document.getElementById('detailModal').classList.add('on')
 }
 function cerrarDetalle(){document.getElementById('detailModal').classList.remove('on');detailId=null}
@@ -567,7 +605,7 @@ function ponerSlider(v){
   var e=entries.find(function(x){return x.id===detailId})
   if(!e)return
   var r=parseFloat(v)
-  if(r>0&&!e.topPos){e.topPos=topPosNext();document.getElementById('detTopPos').value=e.topPos}
+  if(r>0&&!e.topPos){var n=topPosNext();if(n){e.topPos=n;var sel=document.getElementById('detTopPos');if(sel)sel.value=n}}
   if(r===0)delete e.rating;else e.rating=r
   guardar()
   document.getElementById('ratingVal').textContent=r?r.toFixed(1):'-'
@@ -577,9 +615,11 @@ function ponerTopPos(v){
   var e=entries.find(function(x){return x.id===detailId})
   if(!e)return
   var p=parseInt(v,10)||0
-  if(p>20)p=20
   if(p>0&&!e.rating){e.rating=0.5;document.getElementById('ratingSlider').value=0.5;document.getElementById('ratingVal').textContent='0.5'}
-  if(p===0)delete e.topPos;else e.topPos=p
+  if(p===0){delete e.topPos;guardar();render();return}
+  var conflict=entries.find(function(x){return x.topPos===p&&x.id!==e.id})
+  if(conflict)delete conflict.topPos
+  e.topPos=p
   guardar();render()
 }
 function guardarDetalle(close){
@@ -630,15 +670,12 @@ function render(){
     return
   }
   var list=filtrarEntradas()
-  if(filter==='top'){
-    if(!list.length){content.innerHTML='<div class="emp"><div class="ic">🏆</div><h3>Tu Top 20 esta vacio</h3><p>Pon una puntuacion y posicion en el detalle de cada serie</p></div>';return}
-    renderTop(list,content)
-  }
+  if(filter==='top'){renderTop(list,content);return}
   else if(view==='grid')renderGrid(list,content)
   else renderList(list,content)
 }
 
-function topPosNext(){var m=0;entries.forEach(function(e){if(e.topPos&&e.topPos>m)m=e.topPos});return m+1}
+function topPosNext(){var used={};entries.forEach(function(e){if(e.topPos)used[e.topPos]=1});for(var i=1;i<=20;i++){if(!used[i])return i}return 0}
 
 function filtrarEntradas(){
   var list=[].concat(entries)
@@ -678,20 +715,35 @@ function moverTop(id,dir){
 }
 
 function renderTop(list,el){
-  el.innerHTML='<div class="tl-l">'+list.map(function(e,i){
-    var img=e.img?'<img src="'+e.img+'">':''
-    var rkClass=i===0?'gold':i===1?'silver':i===2?'bronze':''
-    return '<div class="tl-i" draggable="true" style="animation-delay:'+(i*50)+'ms" data-id="'+e.id+'">'+
-      '<div class="rk '+rkClass+'">'+(i+1)+'</div>'+
-      '<div class="im">'+img+'</div>'+
-      '<div class="nf"><div class="nm">'+esc(e.titulo)+'</div><div class="tp">'+esc(e.tipo)+(e.anio?' &middot; '+e.anio:'')+'</div></div>'+
-      '<div class="rt">'+e.rating+'</div>'+
-      '<div class="act"><button onclick="event.stopPropagation();abrirDetalle(\''+e.id+'\')" title="Editar">✎</button>'+
-      '<button onclick="event.stopPropagation();moverTop(\''+e.id+'\',-1)" title="Subir">▲</button>'+
-      '<button onclick="event.stopPropagation();moverTop(\''+e.id+'\',1)" title="Bajar">▼</button></div></div>'
-  }).join('')+'</div>'
-  // Drag & drop
-  var items=el.querySelectorAll('.tl-i')
+  // Build lookup of entries by topPos
+  var slotMap={}
+  list.forEach(function(e){slotMap[e.topPos]=e})
+  var html='<div class="tl-l">'
+  for(var i=1;i<=20;i++){
+    var e=slotMap[i]
+    var rkClass=i===1?'gold':i===2?'silver':i===3?'bronze':''
+    if(e){
+      var img=e.img?'<img src="'+e.img+'">':''
+      html+='<div class="tl-i" draggable="true" data-id="'+e.id+'" style="animation-delay:'+(i*30)+'ms">'+
+        '<div class="rk '+rkClass+'">'+i+'</div>'+
+        '<div class="im">'+img+'</div>'+
+        '<div class="nf"><div class="nm">'+esc(e.titulo)+'</div><div class="tp">'+esc(e.tipo)+(e.anio?' &middot; '+e.anio:'')+'</div></div>'+
+        '<div class="rt">'+e.rating+'</div>'+
+        '<div class="act">'+
+        '<button onclick="event.stopPropagation();abrirDetalle(\''+e.id+'\')" title="Editar">✎</button>'+
+        '<button onclick="event.stopPropagation();moverTopSlot(\''+e.id+'\','+(i-1)+')" title="Subir">▲</button>'+
+        '<button onclick="event.stopPropagation();moverTopSlot(\''+e.id+'\','+(i+1)+')" title="Bajar">▼</button>'+
+        '<button onclick="event.stopPropagation();sacarDelTop(\''+e.id+'\')" title="Quitar del top" style="color:#e74c3c">✕</button></div></div>'
+    } else {
+      html+='<div class="tl-i empty" onclick="abrirPicker('+i+')" style="animation-delay:'+(i*30)+'ms;cursor:pointer">'+
+        '<div class="rk '+rkClass+'">'+i+'</div>'+
+        '<div class="nf" style="flex:1;text-align:center;padding:6px 0"><span style="font-size:11px;color:rgba(255,255,255,.08);font-weight:500">+ Añadir</span></div></div>'
+    }
+  }
+  html+='</div>'
+  el.innerHTML=html
+  // Drag & drop on filled slots
+  var items=el.querySelectorAll('.tl-i[draggable]')
   items.forEach(function(item){
     item.addEventListener('dragstart',function(e){e.dataTransfer.setData('text/plain',this.dataset.id);this.style.opacity='.4'})
     item.addEventListener('dragover',function(e){e.preventDefault()})
@@ -699,19 +751,61 @@ function renderTop(list,el){
     item.addEventListener('drop',function(e){
       e.preventDefault()
       var dragId=e.dataTransfer.getData('text/plain')
-      var targetId=this.dataset.id
-      if(dragId===targetId)return
-      var top=entries.filter(function(e){return e.topPos>0}).sort(function(a,b){return a.topPos-b.topPos}).slice(0,20)
-      var from=top.findIndex(function(x){return x.id===dragId})
-      var to=top.findIndex(function(x){return x.id===targetId})
-      if(from<0||to<0)return
-      var diff=to>from?1:-1
-      for(var j=from;j!==to;j+=diff){
-        var t=top[j].topPos;top[j].topPos=top[j+diff].topPos;top[j+diff].topPos=t
+      if(!dragId)return
+      var top=entries.filter(function(e){return e.topPos>0})
+      var from=top.find(function(x){return x.id===dragId})
+      var targetSlot=parseInt(this.querySelector('.rk').textContent,10)
+      if(!from||!targetSlot)return
+      var target=entries.find(function(x){return x.topPos===targetSlot})
+      if(target&&target.id===from.id)return
+      if(target){
+        target.topPos=from.topPos
       }
+      from.topPos=targetSlot
       guardar();render()
     })
   })
+}
+
+function moverTopSlot(id,newPos){
+  if(newPos<1||newPos>20)return
+  var e=entries.find(function(x){return x.id===id})
+  if(!e)return
+  var conflict=entries.find(function(x){return x.topPos===newPos&&x.id!==id})
+  if(conflict)conflict.topPos=e.topPos
+  e.topPos=newPos
+  guardar();render()
+}
+
+function sacarDelTop(id){
+  var e=entries.find(function(x){return x.id===id})
+  if(!e)return
+  delete e.topPos
+  guardar();render()
+}
+
+// ====== TOP PICKER ======
+function abrirPicker(pos){
+  var available=entries.filter(function(e){return e.titulo&&!e.topPos}).sort(function(a,b){return(b.rating||0)-(a.rating||0)})
+  if(!available.length){alert('No hay series disponibles. Primero agrega y califica series.');return}
+  var el=document.getElementById('pickerModal')
+  document.getElementById('pickerPos').textContent='#'+pos
+  document.getElementById('pickerList').innerHTML=available.map(function(e){
+    var img=e.img?'<img src="'+e.img+'">':''
+    return '<div class="pi" onclick="asignarTop(\''+e.id+'\','+pos+')">'+
+      '<div class="im">'+img+'</div>'+
+      '<div class="nf"><div class="nm">'+esc(e.titulo)+'</div><div class="tp">'+(e.rating?e.rating.toFixed(1):'sin puntuar')+'</div></div></div>'
+  }).join('')
+  el.classList.add('on')
+}
+function cerrarPicker(){document.getElementById('pickerModal').classList.remove('on')}
+function asignarTop(id,pos){
+  var e=entries.find(function(x){return x.id===id})
+  if(!e)return
+  var conflict=entries.find(function(x){return x.topPos===pos&&x.id!==id})
+  if(conflict)conflict.topPos=e.topPos
+  if(!e.topPos)e.topPos=pos;else e.topPos=pos
+  guardar();cerrarPicker();render()
 }
 
 function borrarDirecto(id){
