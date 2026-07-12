@@ -126,7 +126,6 @@ body{background:#06060c;color:#fff;font-family:'Inter',sans-serif;display:flex;f
 @keyframes fi{from{opacity:0}to{opacity:1}}
 </style>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/gif.js/0.2.0/gif.js"></script>
 <script>
 var canvas=document.getElementById('display'),ctx=canvas.getContext('2d')
 var W,H,ratio
@@ -375,6 +374,99 @@ function toggleAnim(){
 }
 
 // ====== GIF EXPORT ======
+// ====== GIF ENCODER (self-contained) ======
+function buildGif(frames,delays,width,height,onProgress){
+  function paletteFromPixels(pixels){
+    var map={},pal=[],step=6
+    for(var i=0;i<3;i++){
+      for(var j=0;j<3;j++){
+        for(var k=0;k<3;k++){
+          pal.push(Math.round(i/2*255),Math.round(j/2*255),Math.round(k/2*255))
+        }
+      }
+    }
+    for(var g=0;g<=255;g+=17){pal.push(g,g,g)}
+    while(pal.length<768)pal.push(0,0,0)
+    return pal.slice(0,768)
+  }
+  function nearest(pal,r,g,b){
+    var best=0,bd=Infinity
+    for(var i=0;i<pal.length/3;i++){
+      var dr=r-pal[i*3],dg=g-pal[i*3+1],db=b-pal[i*3+2]
+      var d=dr*dr+dg*dg+db*db
+      if(d<bd){bd=d;best=i}
+    }
+    return best
+  }
+  function lzwEncode(pixels,width,height,colorDepth){
+    var out=[],bits=0,cache=0,nBits=colorDepth+1
+    function writeCode(c){
+      cache|=c<<bits;bits+=nBits
+      while(bits>=8){out.push(cache&255);cache>>>=8;bits-=8}
+    }
+    var clearCode=1<<colorDepth,endCode=clearCode+1
+    var table={},nextCode=endCode+1,tableSize=1<<nBits
+    function resetTable(){
+      table={}
+      for(var i=0;i<clearCode;i++)table[String.fromCharCode(i)]=i
+      nextCode=endCode+1
+      tableSize=1<<nBits
+    }
+    resetTable()
+    writeCode(clearCode)
+    var s=String.fromCharCode(pixels[0])
+    for(var i=1;i<pixels.length;i++){
+      var c=String.fromCharCode(pixels[i]),sc=s+c
+      if(table[sc]!==undefined){s=sc}else{
+        writeCode(table[s])
+        if(nextCode<tableSize){table[sc]=nextCode++;if(nextCode>=tableSize&&nBits<12){nBits++;tableSize=1<<nBits}}
+        s=c
+      }
+    }
+    writeCode(table[s])
+    writeCode(endCode)
+    if(bits>0)out.push(cache&255)
+    return out
+  }
+  var pal=paletteFromPixels(null)
+  // Header
+  var bytes=[0x47,0x49,0x46,0x38,0x39,0x61] // GIF89a
+  // LSD
+  bytes.push(width&255,width>>8&255,height&255,height>>8&255)
+  bytes.push(0xF0|7,0x00,0x00) // GCT flag + size 256, bg=0, aspect=0
+  // Global color table
+  for(var p=0;p<768;p++)bytes.push(pal[p])
+  for(var f=0;f<frames.length;f++){
+    // Graphic Control Extension
+    var delay=Math.round((delays[f]||100)/10)
+    bytes.push(0x21,0xF9,0x04,0x00,delay&255,delay>>8&255,0x00)
+    // Image Descriptor
+    bytes.push(0x2C,0,0,0,0,width&255,width>>8&255,height&255,height>>8&255,0x00)
+    // LZW min code size
+    bytes.push(8)
+    var idx=0,pixelData=new Uint8Array(width*height)
+    for(var y=0;y<height;y++){
+      for(var x=0;x<width;x++){
+        var off=(y*frames[f].width+x)*4
+        if(off+3<frames[f].data.length){
+          pixelData[idx++]=nearest(pal,frames[f].data[off],frames[f].data[off+1],frames[f].data[off+2])
+        }else{pixelData[idx++]=0}
+      }
+    }
+    var compressed=lzwEncode(pixelData,width,height,8)
+    // Sub-blocks
+    for(var bi=0;bi<compressed.length;bi+=255){
+      var chunk=compressed.slice(bi,bi+255)
+      bytes.push(chunk.length)
+      for(var cj=0;cj<chunk.length;cj++)bytes.push(chunk[cj])
+    }
+    bytes.push(0x00) // Block terminator
+    if(onProgress)onProgress((f+1)/frames.length)
+  }
+  bytes.push(0x3B) // Trailer
+  return new Blob([new Uint8Array(bytes)],{type:'image/gif'})
+}
+
 function exportarGif(){
   if(!imgSrc){alert('Primero sube una imagen');return}
   var modal=document.getElementById('exportModal')
@@ -385,93 +477,75 @@ function exportarGif(){
   bar.style.width='0%'
   st.textContent='Preparando...'
 
-  var total=30,fps=10
-  var gif=new GIF({workers:2,quality:10,width:320,height:240,workerScript:'https://cdnjs.cloudflare.com/ajax/libs/gif.js/0.2.0/gif.worker.js'})
+  var total=20,fps=8
+  var gw=160,gh=120
   var tc=document.createElement('canvas')
-  tc.width=320;tc.height=240
+  tc.width=gw;tc.height=gh
   var tctx=tc.getContext('2d')
   tctx.imageSmoothingEnabled=false
+  var frames=[],delays=[],i=0
 
-  var i=0
   function add(){
     if(i>=total){
-      st.textContent='Renderizando...'
-      gif.on('progress',function(p){bar.style.width=Math.round(p*100)+'%'})
-      gif.render();return
+      st.textContent='Codificando GIF...'
+      setTimeout(function(){
+        try{
+          var blob=buildGif(frames,delays,gw,gh,function(p){bar.style.width=Math.round(p*100)+'%'})
+          bar.style.width='100%'
+          st.textContent='GIF listo!'
+          close.style.display='inline-block'
+          var url=URL.createObjectURL(blob)
+          var a=document.createElement('a')
+          a.href=url;a.download='kafervhs.gif'
+          document.body.appendChild(a);a.click();a.remove()
+          setTimeout(function(){URL.revokeObjectURL(url)},10000)
+        }catch(e){
+          st.textContent='Error: '+e.message
+          close.style.display='inline-block'
+        }
+      },50)
+      return
     }
     bar.style.width=Math.round((i/total)*100)+'%'
     st.textContent='Frame '+(i+1)+'/'+total
-    tctx.clearRect(0,0,320,240)
-    // Draw image
+    tctx.clearRect(0,0,gw,gh)
     var iw=imgSrc.width,ih=imgSrc.height
-    var s=Math.min(320/iw,240/ih)
-    tctx.drawImage(imgSrc,(320-iw*s)/2,(240-ih*s)/2,iw*s,ih*s)
-    // Scanlines
+    var s=Math.min(gw/iw,gh/ih)
+    tctx.drawImage(imgSrc,(gw-iw*s)/2,(gh-ih*s)/2,iw*s,ih*s)
+
     var si=E.scan/100
-    if(si>0.01){
-      tctx.fillStyle='rgba(0,0,0,'+(si*0.2)+')'
-      for(var y=0;y<240;y+=3){tctx.fillRect(0,y,320,1)}
-    }
-    // RGB
-    var rgbOff=E.rgb/100*2
+    if(si>0.01){tctx.fillStyle='rgba(0,0,0,'+(si*0.2)+')';for(var y=0;y<gh;y+=3){tctx.fillRect(0,y,gw,1)}}
+    var rgbOff=E.rgb/100*1.5
     if(rgbOff>0.3){
-      var id=tctx.getImageData(0,0,320,240)
-      var d=id.data,tmp=new Uint8ClampedArray(d)
-      var off=Math.round(rgbOff)
-      for(var j=0;j<d.length;j+=4){
-        d[j]=tmp[Math.max(0,j-off*4)]
-        d[j+2]=tmp[Math.min(d.length-4,j+off*4)]
-      }
+      var id=tctx.getImageData(0,0,gw,gh);var d=id.data,tmp=new Uint8ClampedArray(d);var off=Math.round(rgbOff)
+      for(var j=0;j<d.length;j+=4){d[j]=tmp[Math.max(0,j-off*4)];d[j+2]=tmp[Math.min(d.length-4,j+off*4)]}
       tctx.putImageData(id,0,0)
     }
-    // Glitch
     var gi=E.glitch/100
-    if(gi>0.01&&i%3===0){
-      if(Math.random()<0.3){
-        var shake=(Math.random()-0.5)*gi*6
-        var gw=tctx.getImageData(Math.max(0,Math.round(shake)),0,320-Math.abs(Math.round(shake)),240)
-        tctx.putImageData(gw,Math.max(0,-Math.round(shake)),0)
-      }
+    if(gi>0.01&&i%3===0&&Math.random()<0.3){
+      var shake=(Math.random()-0.5)*gi*4
+      var gw2=tctx.getImageData(Math.max(0,Math.round(shake)),0,gw-Math.abs(Math.round(shake)),gh)
+      tctx.putImageData(gw2,Math.max(0,-Math.round(shake)),0)
     }
-    // Curve
     var ci=E.curve/100
     if(ci>0.01){
-      var g=tctx.createRadialGradient(160,120,50,160,120,170)
-      g.addColorStop(0,'rgba(0,0,0,0)')
-      g.addColorStop(1,'rgba(0,0,0,'+(ci*0.25)+')')
-      tctx.fillStyle=g;tctx.fillRect(0,0,320,240)
+      var gg=tctx.createRadialGradient(gw/2,gh/2,gw*0.15,gw/2,gh/2,gw*0.7)
+      gg.addColorStop(0,'rgba(0,0,0,0)');gg.addColorStop(1,'rgba(0,0,0,'+(ci*0.25)+')')
+      tctx.fillStyle=gg;tctx.fillRect(0,0,gw,gh)
     }
-    // Noise
     var ni=E.noise/100
     if(ni>0.01&&i%2===0){
-      var id2=tctx.getImageData(0,0,320,240)
-      var d2=id2.data
-      for(var k=0;k<d2.length;k+=4){
-        if(Math.random()<ni*0.08){var v=Math.random()*255;d2[k]=v;d2[k+1]=v;d2[k+2]=v}
-      }
+      var id2=tctx.getImageData(0,0,gw,gh);var d2=id2.data
+      for(var k=0;k<d2.length;k+=4){if(Math.random()<ni*0.08){var v=Math.random()*255;d2[k]=v;d2[k+1]=v;d2[k+2]=v}}
       tctx.putImageData(id2,0,0)
     }
-    // Flicker
     var fi=E.flicker/100
-    if(fi>0.01){
-      var fl=Math.sin(i*0.5)*fi*0.06
-      tctx.fillStyle='rgba(0,0,0,'+Math.abs(fl)+')'
-      tctx.fillRect(0,0,320,240)
-    }
-    gif.addFrame(tc,{delay:1000/fps,copy:true})
-    i++;setTimeout(add,25)
+    if(fi>0.01){var fl=Math.sin(i*0.5)*fi*0.06;tctx.fillStyle='rgba(0,0,0,'+Math.abs(fl)+')';tctx.fillRect(0,0,gw,gh)}
+    frames.push(tctx.getImageData(0,0,gw,gh))
+    delays.push(1000/fps)
+    i++;setTimeout(add,20)
   }
   add()
-  gif.on('finished',function(blob){
-    bar.style.width='100%'
-    st.textContent='GIF listo!'
-    close.style.display='inline-block'
-    var url=URL.createObjectURL(blob)
-    var a=document.createElement('a')
-    a.href=url;a.download='kafervhs.gif'
-    document.body.appendChild(a);a.click();a.remove()
-    setTimeout(function(){URL.revokeObjectURL(url)},10000)
-  })
 }
 function cerrarExport(){document.getElementById('exportModal').classList.remove('on')}
 </script>
