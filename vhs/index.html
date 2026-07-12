@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0,user-scalable=no">
+<title>KaferVHS</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{height:100%}
+body{background:#08080e;color:#fff;font-family:'Inter',sans-serif;display:flex;flex-direction:column;align-items:center;overflow:hidden;user-select:none}
+
+/* TV FRAME */
+.tv-wrap{display:flex;flex-direction:column;align-items:center;padding:20px 20px 0;flex-shrink:0;position:relative}
+.tv-frame{position:relative;border-radius:28px 28px 12px 12px;background:linear-gradient(145deg,#1a1a24,#0d0d14);padding:14px;box-shadow:0 20px 60px rgba(0,0,0,.7),inset 0 1px 0 rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.03)}
+.screen-wrap{position:relative;border-radius:10px;overflow:hidden;background:#000;border:1px solid rgba(255,255,255,.02);width:640px;height:480px}
+#display{width:100%;height:100%;display:block;image-rendering:pixelated}
+.scanlines{position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;background:repeating-linear-gradient(0deg,rgba(0,0,0,.25) 0,rgba(0,0,0,.25) 1px,transparent 1px,transparent 3px);z-index:2}
+.crt-curve{position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:3;background:radial-gradient(ellipse at center,transparent 60%,rgba(0,0,0,.35) 100%)}
+.vhs-overlay{position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:4;mix-blend-mode:screen;opacity:var(--vhs-noise,0.04)}
+.tv-brand{position:absolute;bottom:6px;right:14px;font-size:7px;color:rgba(255,255,255,.04);letter-spacing:2px;font-weight:700;z-index:5}
+
+/* TV BODY DECOR */
+.tv-foot{width:70%;height:18px;background:linear-gradient(145deg,#14141e,#0a0a10);border-radius:0 0 18px 18px;margin:-1px auto 0;border:1px solid rgba(255,255,255,.02);border-top:none}
+.tv-legs{display:flex;gap:100px;margin-top:-1px}
+.tv-leg{width:20px;height:30px;background:linear-gradient(180deg,#14141e,#0a0a10);border-radius:0 0 6px 6px;border:1px solid rgba(255,255,255,.02);border-top:none}
+
+/* CONTROLS */
+.controls{width:100%;max-width:680px;padding:16px 0 10px;display:flex;flex-direction:column;gap:10px;flex-shrink:0}
+.ctrl-row{display:flex;gap:8px;align-items:center;flex-wrap:wrap;justify-content:center}
+.ctrl-row label{font-size:9px;color:rgba(255,255,255,.2);text-transform:uppercase;letter-spacing:.6px;font-weight:600}
+.btn{padding:7px 16px;border-radius:8px;border:none;cursor:pointer;font-size:11px;font-weight:600;font-family:inherit;transition:.2s;background:rgba(255,255,255,.04);color:rgba(255,255,255,.4);border:1px solid rgba(255,255,255,.04)}
+.btn:hover{background:rgba(255,255,255,.07);color:#fff}
+.btn.prim{background:var(--accent,#6b5bff);color:#000;border-color:transparent}
+.btn.prim:hover{transform:translateY(-1px);box-shadow:0 4px 20px rgba(107,91,255,.25)}
+.btn.green{background:#22c55e;color:#000;border-color:transparent}
+.btn.green:hover{transform:translateY(-1px);box-shadow:0 4px 20px rgba(34,197,94,.25)}
+.btn.danger{background:#ef4444;color:#fff;border-color:transparent}
+.btn.danger:hover{transform:translateY(-1px)}
+.slider-group{display:flex;align-items:center;gap:6px}
+.slider-group input[type=range]{width:90px;height:2px;-webkit-appearance:none;background:rgba(255,255,255,.06);border-radius:2px;outline:none}
+.slider-group input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:12px;height:12px;border-radius:50%;background:var(--accent,#6b5bff);cursor:pointer}
+.slider-group .val{font-size:10px;color:rgba(255,255,255,.15);min-width:24px;text-align:right}
+
+/* DROP ZONE */
+.drop-zone{display:none;position:absolute;inset:0;z-index:20;background:rgba(107,91,255,.08);border:2px dashed rgba(107,91,255,.3);border-radius:10px;align-items:center;justify-content:center;flex-direction:column;gap:8px;backdrop-filter:blur(4px)}
+.drop-zone.show{display:flex}
+.drop-zone span{font-size:13px;color:rgba(255,255,255,.2);font-weight:500}
+.drop-zone .icon{font-size:36px;opacity:.15}
+
+/* STATUS */
+#status{font-size:10px;color:rgba(255,255,255,.1);text-align:center;padding:2px 0}
+
+/* MODAL */
+.modal{position:fixed;top:0;left:0;width:100%;height:100%;z-index:100;display:none;align-items:center;justify-content:center}
+.modal.on{display:flex;animation:fi .2s}
+.modal .bg{position:absolute;inset:0;background:rgba(0,0,0,.5);backdrop-filter:blur(12px)}
+.modal .mdl2{position:relative;background:rgba(16,16,24,.95);border:1px solid rgba(255,255,255,.04);border-radius:14px;padding:22px;max-width:340px;width:90%;text-align:center}
+.modal .mdl2 h3{font-size:14px;margin-bottom:6px}
+.modal .mdl2 p{font-size:11px;color:rgba(255,255,255,.2);margin-bottom:14px;line-height:1.4}
+.modal .mdl2 .bar{width:100%;height:4px;background:rgba(255,255,255,.04);border-radius:2px;overflow:hidden;margin:10px 0}
+.modal .mdl2 .bar div{height:100%;width:0%;background:var(--accent,#6b5bff);border-radius:2px;transition:.3s}
+.modal .mdl2 .btn{margin-top:6px}
+
+/* FILE INPUT HIDDEN */
+#fileInput{display:none}
+
+/* RESPONSIVE */
+@media(max-width:700px){
+  .screen-wrap{width:calc(100vw - 40px);height:calc((100vw - 40px)*.75);max-height:50vh}
+  .tv-frame{padding:10px;border-radius:20px 20px 10px 10px}
+  .controls{padding:10px 16px 6px;max-width:100%}
+  .slider-group input[type=range]{width:60px}
+  .ctrl-row{gap:5px}
+  .btn{padding:5px 10px;font-size:10px}
+}
+@media(max-width:480px){
+  .screen-wrap{width:calc(100vw - 24px);height:calc((100vw - 24px)*.75)}
+  .tv-wrap{padding:10px 10px 0}
+  .ctrl-row label{font-size:8px}
+  .slider-group input[type=range]{width:44px}
+}
+
+@keyframes fi{from{opacity:0}to{opacity:1}}
+</style>
+</head>
+<body>
+<div class="tv-wrap">
+  <div class="tv-frame">
+    <div class="screen-wrap" id="screenWrap">
+      <canvas id="display" width="640" height="480"></canvas>
+      <div class="scanlines" id="scanlinesEl"></div>
+      <div class="crt-curve"></div>
+      <div class="vhs-overlay" id="vhsNoiseEl"></div>
+      <div class="tv-brand">KAFERVHS</div>
+      <div class="drop-zone" id="dropZone"><span class="icon">📺</span><span>Suelta tu imagen aqui</span></div>
+    </div>
+  </div>
+  <div class="tv-foot"></div>
+  <div class="tv-legs"><div class="tv-leg"></div><div class="tv-leg"></div></div>
+</div>
+
+<div class="controls">
+  <div class="ctrl-row">
+    <button class="btn prim" onclick="document.getElementById('fileInput').click()">📁 Subir imagen</button>
+    <button class="btn green" id="exportBtn" onclick="exportarGif()">🎞 Exportar GIF</button>
+    <button class="btn" id="playBtn" onclick="toggleAnim()">⏸ Pausar</button>
+    <button class="btn" onclick="resetEfectos()">↺ Reset</button>
+  </div>
+  <div class="ctrl-row">
+    <div class="slider-group"><label>Escaneo</label><input type="range" min="0" max="100" value="50" id="sScan" oninput="aplicar()"><span class="val" id="vScan">50</span></div>
+    <div class="slider-group"><label>Ruido</label><input type="range" min="0" max="100" value="20" id="sNoise" oninput="aplicar()"><span class="val" id="vNoise">20</span></div>
+    <div class="slider-group"><label>Curvatura</label><input type="range" min="0" max="100" value="50" id="sCurve" oninput="aplicar()"><span class="val" id="vCurve">50</span></div>
+    <div class="slider-group"><label>RGB</label><input type="range" min="0" max="100" value="30" id="sRgb" oninput="aplicar()"><span class="val" id="vRgb">30</span></div>
+    <div class="slider-group"><label>Parpadeo</label><input type="range" min="0" max="100" value="15" id="sFlicker" oninput="aplicar()"><span class="val" id="vFlicker">15</span></div>
+  </div>
+  <div id="status">Arrastra una imagen o haz clic en "Subir imagen"</div>
+</div>
+
+<input type="file" id="fileInput" accept="image/*">
+
+<div class="modal" id="exportModal">
+  <div class="bg" onclick="cerrarExportModal()"></div>
+  <div class="mdl2">
+    <h3>🎞 Exportando GIF...</h3>
+    <p id="exportStatus">Procesando frames...</p>
+    <div class="bar"><div id="exportBar"></div></div>
+    <button class="btn" onclick="cerrarExportModal()" style="display:none" id="exportCloseBtn">Cerrar</button>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gif.js/0.2.0/gif.js"></script>
+<script>
+var canvas=document.getElementById('display'),ctx=canvas.getContext('2d')
+var W=640,H=480
+var imgSrc=null,animando=true,frame=0
+var efectos={scan:50,noise:20,curve:50,rgb:30,flicker:15}
+
+// Default: draw a retro pattern
+function drawDefault(){
+  ctx.fillStyle='#0a0a14'
+  ctx.fillRect(0,0,W,H)
+  ctx.fillStyle='rgba(255,255,255,.02)'
+  ctx.font='16px Inter,sans-serif'
+  ctx.textAlign='center'
+  ctx.fillText('📺 Suelta una imagen',W/2,H/2-10)
+  ctx.font='11px Inter,sans-serif'
+  ctx.fillStyle='rgba(255,255,255,.04)'
+  ctx.fillText('o haz clic en "Subir imagen"',W/2,H/2+18)
+}
+drawDefault()
+
+function aplicar(){
+  efectos.scan=+document.getElementById('sScan').value
+  efectos.noise=+document.getElementById('sNoise').value
+  efectos.curve=+document.getElementById('sCurve').value
+  efectos.rgb=+document.getElementById('sRgb').value
+  efectos.flicker=+document.getElementById('sFlicker').value
+  document.getElementById('vScan').textContent=efectos.scan
+  document.getElementById('vNoise').textContent=efectos.noise
+  document.getElementById('vCurve').textContent=efectos.curve
+  document.getElementById('vRgb').textContent=efectos.rgb
+  document.getElementById('vFlicker').textContent=efectos.flicker
+  // Update vhs overlay opacity
+  document.getElementById('vhsNoiseEl').style.setProperty('--vhs-noise',efectos.noise/100*0.08)
+}
+
+function resetEfectos(){
+  document.getElementById('sScan').value=50
+  document.getElementById('sNoise').value=20
+  document.getElementById('sCurve').value=50
+  document.getElementById('sRgb').value=30
+  document.getElementById('sFlicker').value=15
+  aplicar()
+}
+
+// Image loading
+document.getElementById('fileInput').addEventListener('change',function(e){
+  var file=e.target.files[0]
+  if(!file)return
+  cargarImagen(file)
+})
+
+function cargarImagen(file){
+  var reader=new FileReader()
+  reader.onload=function(ev){
+    var img=new Image()
+    img.onload=function(){imgSrc=img;document.getElementById('status').textContent=file.name+' ('+img.width+'x'+img.height+')'}
+    img.src=ev.target.result
+  }
+  reader.readAsDataURL(file)
+}
+
+// Drag & drop
+var sw=document.getElementById('screenWrap'),dz=document.getElementById('dropZone')
+sw.addEventListener('dragover',function(e){e.preventDefault();dz.classList.add('show')})
+sw.addEventListener('dragleave',function(){dz.classList.remove('show')})
+sw.addEventListener('drop',function(e){
+  e.preventDefault();dz.classList.remove('show')
+  var file=e.dataTransfer.files[0]
+  if(file&&file.type.startsWith('image/'))cargarImagen(file)
+})
+
+// URL paste
+document.addEventListener('paste',function(e){
+  var text=(e.clipboardData||window.clipboardData).getData('text')
+  if(!text||!text.match(/\.(jpg|jpeg|png|gif|webp)/i))return
+  var img=new Image()
+  img.crossOrigin='anonymous'
+  img.onload=function(){imgSrc=img;document.getElementById('status').textContent='URL: '+(text.slice(0,40)+(text.length>40?'...':''))}
+  img.onerror=function(){document.getElementById('status').textContent='Error al cargar la URL'}
+  img.src=text
+})
+
+// Render loop
+function renderizar(){
+  requestAnimationFrame(renderizar)
+  if(!animando)return
+  frame++
+  ctx.clearRect(0,0,W,H)
+  if(imgSrc){
+    // Draw image centered, pixelated, fitting screen
+    var iw=imgSrc.width,ih=imgSrc.height
+    var scale=Math.min(W/iw,H/ih)
+    var dw=Math.round(iw*scale),dh=Math.round(ih*scale)
+    var dx=Math.round((W-dw)/2),dy=Math.round((H-dh)/2)
+    ctx.imageSmoothingEnabled=false
+    // Chromatic aberration (RGB split)
+    var rgbOff=efectos.rgb/100*3
+    if(rgbOff>0.3){
+      // Red channel offset
+      ctx.globalAlpha=0.15*(efectos.rgb/100)
+      ctx.drawImage(imgSrc,dx+rgbOff,dy,dw,dh)
+      // Blue channel offset
+      ctx.globalAlpha=0.15*(efectos.rgb/100)
+      ctx.drawImage(imgSrc,dx-rgbOff,dy,dw,dh)
+      ctx.globalAlpha=1
+    }
+    ctx.drawImage(imgSrc,dx,dy,dw,dh)
+    ctx.imageSmoothingEnabled=true
+  }else{
+    drawDefault()
+  }
+  // Scanlines (drawn on canvas for export inclusion)
+  var scanIntensity=efectos.scan/100
+  if(scanIntensity>0.01){
+    ctx.fillStyle='rgba(0,0,0,'+(scanIntensity*0.2)+')'
+    for(var y=0;y<H;y+=3){ctx.fillRect(0,y,W,1)}
+  }
+  // Noise
+  var noiseAmmount=efectos.noise/100
+  if(noiseAmmount>0.01&&frame%2===0){
+    var id=ctx.getImageData(0,0,W,H)
+    var d=id.data
+    for(var i=0;i<d.length;i+=4){
+      if(Math.random()<noiseAmmount*0.08){
+        var v=Math.random()*255
+        d[i]=v;d[i+1]=v;d[i+2]=v
+      }
+    }
+    ctx.putImageData(id,0,0)
+  }
+  // Screen curvature via gradient
+  var curveIntensity=efectos.curve/100
+  if(curveIntensity>0.01){
+    var grad=ctx.createRadialGradient(W/2,H/2,W*0.3,W/2,H/2,W*0.7)
+    grad.addColorStop(0,'rgba(0,0,0,0)')
+    grad.addColorStop(1,'rgba(0,0,0,'+(curveIntensity*0.35)+')')
+    ctx.fillStyle=grad;ctx.fillRect(0,0,W,H)
+  }
+  // Flicker
+  var flickIntensity=efectos.flicker/100
+  if(flickIntensity>0.01){
+    var f=Math.sin(frame*0.15)*flickIntensity*0.08
+    ctx.fillStyle='rgba(0,0,0,'+Math.abs(f)+')'
+    ctx.fillRect(0,0,W,H)
+  }
+  // VHS tracking lines
+  if(noiseAmmount>0.05&&frame%30<2){
+    var ty=Math.random()*H
+    ctx.fillStyle='rgba(255,255,255,'+(noiseAmmount*0.03)+')'
+    ctx.fillRect(0,ty,W,2+Math.random()*4)
+  }
+}
+renderizar()
+
+function toggleAnim(){
+  animando=!animando
+  document.getElementById('playBtn').textContent=animando?'⏸ Pausar':'▶ Reanudar'
+}
+
+// ====== GIF EXPORT ======
+function exportarGif(){
+  if(!imgSrc){alert('Primero sube una imagen');return}
+  var modal=document.getElementById('exportModal')
+  var bar=document.getElementById('exportBar')
+  var status=document.getElementById('exportStatus')
+  var closeBtn=document.getElementById('exportCloseBtn')
+  modal.classList.add('on');closeBtn.style.display='none'
+  bar.style.width='0%'
+  status.textContent='Preparando frames...'
+
+  var totalFrames=30,fps=10
+  var gif=new GIF({workers:2,quality:10,width:320,height:240,workerScript:'https://cdnjs.cloudflare.com/ajax/libs/gif.js/0.2.0/gif.worker.js'})
+  var tempCanvas=document.createElement('canvas')
+  tempCanvas.width=320;tempCanvas.height=240
+  var tc=tempCanvas.getContext('2d')
+  tc.imageSmoothingEnabled=false
+
+  var i=0
+  function addFrame(){
+    if(i>=totalFrames){
+      status.textContent='Renderizando GIF...'
+      gif.on('progress',function(p){bar.style.width=Math.round(p*100)+'%'})
+      gif.render()
+      return
+    }
+    bar.style.width=Math.round((i/totalFrames)*100)+'%'
+    status.textContent='Procesando frame '+(i+1)+'/'+totalFrames
+
+    // Render current frame state into temp canvas
+    tc.clearRect(0,0,320,240)
+    var iw=imgSrc.width,ih=imgSrc.height
+    var scale=Math.min(320/iw,240/ih)
+    var dw=Math.round(iw*scale),dh=Math.round(ih*scale)
+    var dx=Math.round((320-dw)/2),dy=Math.round((240-dh)/2)
+    tc.drawImage(imgSrc,dx,dy,dw,dh)
+
+    // Scanlines
+    var si=efectos.scan/100
+    if(si>0.01){
+      tc.fillStyle='rgba(0,0,0,'+(si*0.2)+')'
+      for(var y=0;y<240;y+=3){tc.fillRect(0,y,320,1)}
+    }
+    // RGB
+    var rgbOff=efectos.rgb/100*2
+    if(rgbOff>0.3){
+      var id=tc.getImageData(0,0,320,240)
+      var d2=id.data
+      var tmp=new Uint8ClampedArray(d2)
+      for(var j=0;j<d2.length;j+=4){
+        d2[j]=tmp[Math.max(0,j-rgbOff*4)]     // R ← shifted
+        d2[j+2]=tmp[Math.min(d2.length-4,j+rgbOff*4)] // B → shifted
+      }
+      tc.putImageData(id,0,0)
+    }
+    // Curvature
+    var ci=efectos.curve/100
+    if(ci>0.01){
+      var g=tc.createRadialGradient(160,120,60,160,120,180)
+      g.addColorStop(0,'rgba(0,0,0,0)')
+      g.addColorStop(1,'rgba(0,0,0,'+(ci*0.25)+')')
+      tc.fillStyle=g;tc.fillRect(0,0,320,240)
+    }
+    // Flicker
+    var fi=efectos.flicker/100
+    if(fi>0.01){
+      var fl=Math.sin(i*0.5)*fi*0.06
+      tc.fillStyle='rgba(0,0,0,'+Math.abs(fl)+')'
+      tc.fillRect(0,0,320,240)
+    }
+    // Noise
+    var ni=efectos.noise/100
+    if(ni>0.01){
+      var id2=tc.getImageData(0,0,320,240)
+      var d3=id2.data
+      for(var k=0;k<d3.length;k+=4){
+        if(Math.random()<ni*0.06){var v=Math.random()*255;d3[k]=v;d3[k+1]=v;d3[k+2]=v}
+      }
+      tc.putImageData(id2,0,0)
+    }
+
+    gif.addFrame(tempCanvas,{delay:1000/fps,copy:true})
+    i++
+    setTimeout(addFrame,30)
+  }
+  addFrame()
+
+  gif.on('finished',function(blob){
+    bar.style.width='100%'
+    status.textContent='GIF listo!'
+    closeBtn.style.display='inline-block'
+    var url=URL.createObjectURL(blob)
+    var a=document.createElement('a')
+    a.href=url;a.download='kafervhs.gif'
+    document.body.appendChild(a);a.click()
+    a.remove()
+    setTimeout(function(){URL.revokeObjectURL(url)},10000)
+  })
+}
+
+function cerrarExportModal(){
+  document.getElementById('exportModal').classList.remove('on')
+}
+</script>
+</body>
+</html>
