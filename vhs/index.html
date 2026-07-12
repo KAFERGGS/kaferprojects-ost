@@ -498,6 +498,7 @@ function exportarGif(){
           var a=document.createElement('a')
           a.href=url;a.download='kafervhs.gif'
           document.body.appendChild(a);a.click();a.remove()
+          window.open(url,'_blank')
           setTimeout(function(){URL.revokeObjectURL(url)},10000)
         }catch(e){
           st.textContent='Error: '+e.message
