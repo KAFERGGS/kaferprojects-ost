@@ -154,7 +154,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);overflow:hid
 
 <div class="lyt">
   <aside class="sb">
-    <div class="sb-h"><h3>Biblioteca</h3><div style="display:flex;gap:2px"><button id="homeBtn">🏠</button><button id="addAlbumBtn" style="display:none">+</button></div></div>
+    <div class="sb-h"><h3>Biblioteca</h3><div style="display:flex;gap:2px"><button id="homeBtn">🏠</button><button id="addAlbumBtn" style="display:none">+</button><button id="importBtn" style="display:none" onclick="abrirImport()" title="Importar álbum">📥</button></div></div>
     <div class="sb-l" id="sidebarList"></div>
   </aside>
   <main class="ct">
@@ -251,13 +251,34 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);overflow:hid
   </div>
 </div>
 
+<!-- Import Album Modal -->
+<div class="mo" id="importModal">
+  <div class="mdl" style="min-width:420px;max-width:92%">
+    <h2>Importar álbum</h2>
+    <p style="color:var(--text2);font-size:11px;margin:2px 0 10px">Seleccioná el JSON exportado y los audios. Se matchean automáticamente.</p>
+    <label>Archivo JSON (.kaferalbum.json)</label>
+    <input type="file" id="importJsonInput" accept=".json" style="margin-bottom:8px">
+    <label>Archivos de audio (opcional)</label>
+    <input type="file" id="importAudioInput" accept=".mp3,.ogg,.wav,.flac,audio/*" multiple style="margin-bottom:8px">
+    <div id="importPreview" style="max-height:260px;overflow-y:auto;margin:8px 0"></div>
+    <div id="importProgress" style="display:none;margin:8px 0">
+      <div class="bar"><div id="importBar" style="width:0%"></div></div>
+      <p id="importStatus" style="font-size:11px;color:var(--text2);margin-top:4px"></p>
+    </div>
+    <div class="btns">
+      <button class="no" onclick="cerrarImport()">Cancelar</button>
+      <button class="ok" id="importSaveBtn" onclick="ejecutarImport()" disabled>Importar</button>
+    </div>
+  </div>
+</div>
+
 <!-- Batch Re-upload Modal -->
 <div class="mo" id="batchModal">
   <div class="mdl" style="min-width:420px;max-width:92%">
     <h2>Re-subir canciones</h2>
     <p style="color:var(--text2);font-size:11px;margin:2px 0 10px">Seleccioná todos los archivos de audio. Se matchean por nombre a las canciones existentes.</p>
     <label>Archivos de audio</label>
-    <input type="file" id="batchFileInput" accept=".mp3,.ogg,.wav,audio/*" multiple style="margin-bottom:8px">
+    <input type="file" id="batchFileInput" accept=".mp3,.ogg,.wav,.flac,audio/*" multiple style="margin-bottom:8px">
     <div id="batchMatchArea" style="max-height:300px;overflow-y:auto;margin:8px 0"></div>
     <div id="batchProgress" style="display:none;margin:8px 0">
       <div class="bar"><div id="batchBar" style="width:0%"></div></div>
@@ -307,7 +328,7 @@ function esc(s){const e=document.createElement('div');e.textContent=s;return e.i
 // ═══ ADMIN ═══
 let _kc=0;
 document.addEventListener('keydown',e=>{
-  if(e.key==='k'||e.key==='K'){_kc++;if(_kc>=10){_kc=0;const c=prompt('Código de administrador:');if(c==='KaferOST1405'){isAdm=true;document.getElementById('adminBadge').style.display='inline';document.getElementById('adminBtn').style.display='flex';document.getElementById('addAlbumBtn').style.display='flex';rSB();if(curAlbum)renderA(curAlbum)}else alert('Código incorrecto')}}
+  if(e.key==='k'||e.key==='K'){_kc++;if(_kc>=10){_kc=0;const c=prompt('Código de administrador:');if(c==='KaferOST1405'){isAdm=true;document.getElementById('adminBadge').style.display='inline';document.getElementById('adminBtn').style.display='flex';document.getElementById('addAlbumBtn').style.display='flex';document.getElementById('importBtn').style.display='flex';rSB();if(curAlbum)renderA(curAlbum)}else alert('Código incorrecto')}}
 });
 document.getElementById('adminBtn').addEventListener('click',()=>{alert('Ya eres admin! Los archivos se suben a Firebase Storage.')});
 
@@ -466,8 +487,8 @@ function delA(){if(!isAdm)return;const al=albums.find(x=>x.i===curAlbum);
 
 function expA(){
   const al=albums.find(x=>x.i===curAlbum);if(!al)return
-  const ss=[...(al.ss||[])].sort((x,y)=>x.o-y.o)
-  var data={album:{n:al.n,public:al.public!==false,dt:al.dt},songs:ss.map(s=>({n:s.n,o:s.o,f:s.f||'mp3',d:s.d||0,dt:s.dt}))}
+  const ss=[...(al.ss||[])].sort((x,y)=>(x.o||0)-(y.o||0))
+  var data={version:2,album:{n:al.n,public:al.public!==false,dt:al.dt},songs:ss.map(s=>({n:s.n,o:s.o||0,f:s.f||'mp3',d:s.d||0,dt:s.dt}))}
   var blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'})
   var url=URL.createObjectURL(blob)
   var a=document.createElement('a');a.href=url;a.download=al.n.replace(/[^a-zA-Z0-9]/g,'_')+'.kaferalbum.json'
@@ -516,6 +537,80 @@ document.getElementById('songFileInput').addEventListener('change',function(){
 });
 document.getElementById('prevPlayBtn').addEventListener('click',function(){const a=window._pa;if(!a)return;if(a.paused){a.play();this.textContent='⏸'}else{a.pause();this.textContent='▶'}});
 document.getElementById('prevProg').addEventListener('input',function(){const a=window._pa;if(!a||!a.duration)return;a.currentTime=(this.value/100)*a.duration});
+
+// ═══ IMPORT ALBUM ═══
+var importJson=null,importAudio=[];
+function abrirImport(){
+  document.getElementById('importJsonInput').value='';document.getElementById('importAudioInput').value=''
+  document.getElementById('importPreview').innerHTML='';document.getElementById('importProgress').style.display='none'
+  document.getElementById('importSaveBtn').disabled=true;importJson=null;importAudio=[]
+  document.getElementById('importModal').classList.add('on')
+}
+document.getElementById('importJsonInput').addEventListener('change',function(){
+  var f=this.files[0];if(!f)return
+  var r=new FileReader();r.onload=function(e){
+    try{
+      importJson=JSON.parse(e.target.result)
+      if(!importJson.album||!importJson.songs)throw new Error('Formato inválido')
+      importJson.songs.sort((x,y)=>(x.o||0)-(y.o||0))
+      var h='<div class="bi"><span class="st ok"></span><span class="sn"><b>'+esc(importJson.album.n)+'</b></span><span class="fn">'+importJson.songs.length+' canciones</span></div>'
+      importJson.songs.forEach(function(s,i){
+        h+='<div class="bi"><span class="st pd"></span><span class="sn">'+esc(s.n)+'</span></div>'
+      })
+      document.getElementById('importPreview').innerHTML=h
+      document.getElementById('importSaveBtn').disabled=false
+    }catch(e){alert('Error al leer JSON: '+e.message)}
+  };r.readAsText(f)
+})
+document.getElementById('importAudioInput').addEventListener('change',function(){importAudio=Array.from(this.files)})
+async function ejecutarImport(){
+  if(!importJson){alert('Primero seleccioná un archivo JSON');return}
+  var btn=document.getElementById('importSaveBtn');btn.disabled=true;btn.textContent='Importando...'
+  var prog=document.getElementById('importProgress');prog.style.display='block'
+  var bar=document.getElementById('importBar');var st=document.getElementById('importStatus')
+  try{
+    // Create album
+    var albumId=uid()
+    var coverUrl=importJson.album.c||null
+    await db.collection('albums').doc(albumId).set({n:importJson.album.n,public:importJson.album.public!==false,dt:new Date().toISOString(),c:coverUrl})
+    // Create songs
+    var total=importJson.songs.length
+    for(var i=0;i<total;i++){
+      var s=importJson.songs[i];st.textContent='Creando canción '+(i+1)+'/'+total+': '+s.n
+      bar.style.width=Math.round((i+1)/total*100)+'%'
+      var songId=uid()+'.'+(s.f||'mp3')
+      // Try to match audio file
+      var audioUrl=null
+      if(s.audioUrl&&s.audioUrl.startsWith('http'))audioUrl=s.audioUrl
+      else{
+        for(var j=0;j<importAudio.length;j++){
+          var fn=importAudio[j].name.replace(/\.\w+$/,'').toLowerCase().trim()
+          var sn=s.n.toLowerCase().trim()
+          if(fn===sn||fn.includes(sn)||sn.includes(fn)){
+            var ext=importAudio[j].name.match(/\.(\w+)$/)?.[1]||'mp3'
+            var baseId=songId.replace(/\.\w+$/,'')
+            var url=await uploadFile('audio/'+baseId+'.'+ext,importAudio[j])
+            audioUrl=url
+            importAudio.splice(j,1)
+            break
+          }
+        }
+      }
+      await db.collection('songs').doc(songId).set({
+        a:albumId,n:s.n,f:s.f||'mp3',d:s.d||0,o:i,
+        dt:new Date().toISOString().slice(0,10),
+        audioUrl:audioUrl
+      })
+    }
+    bar.style.width='100%';st.textContent='✅ Álbum importado!'
+    btn.textContent='Listo'
+    cerrarImport()
+    await loadD();curAlbum=null;goHome()
+    // Open the new album
+    setTimeout(function(){openA(albumId)},300)
+  }catch(e){st.textContent='Error: '+e.message;btn.disabled=false;btn.textContent='Reintentar'}
+}
+function cerrarImport(){document.getElementById('importModal').classList.remove('on')}
 
 // ═══ BATCH RE-UPLOAD ═══
 var batchFiles=[],batchMatches=[];
@@ -675,7 +770,7 @@ document.getElementById('progBar').addEventListener('input',function(){if(au.dur
 // Init
 async function init(){
   const saved=localStorage.getItem('kf_tk');if(saved)isAdm=true;
-  if(isAdm){document.getElementById('adminBadge').style.display='inline';document.getElementById('adminBtn').style.display='flex';document.getElementById('addAlbumBtn').style.display='flex'}
+  if(isAdm){document.getElementById('adminBadge').style.display='inline';document.getElementById('adminBtn').style.display='flex';document.getElementById('addAlbumBtn').style.display='flex';document.getElementById('importBtn').style.display='flex'}
   escucha();
 }
 init();
