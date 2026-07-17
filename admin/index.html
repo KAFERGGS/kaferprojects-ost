@@ -1,0 +1,818 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0,user-scalable=no">
+<title>Kafer Projects ADMIN</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{height:100%;overflow:hidden}
+body{
+  background:#08080e;
+  color:#fff;
+  font-family:'Inter',sans-serif;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  user-select:none;
+  min-height:100vh;
+}
+::-webkit-scrollbar{width:4px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:rgba(139,92,246,.3);border-radius:4px}
+::-webkit-scrollbar-thumb:hover{background:rgba(139,92,246,.5)}
+
+.bg-glow{
+  position:fixed;top:-30%;left:-20%;width:70%;height:70%;
+  background:radial-gradient(circle,rgba(139,92,246,.08) 0%,transparent 70%);
+  pointer-events:none;z-index:0;
+}
+.bg-glow2{
+  position:fixed;bottom:-30%;right:-20%;width:70%;height:70%;
+  background:radial-gradient(circle,rgba(124,58,237,.06) 0%,transparent 70%);
+  pointer-events:none;z-index:0;
+}
+
+.glass{
+  background:rgba(255,255,255,.03);
+  backdrop-filter:blur(24px);
+  -webkit-backdrop-filter:blur(24px);
+  border:1px solid rgba(255,255,255,.06);
+  border-radius:16px;
+}
+.glass-sm{
+  background:rgba(255,255,255,.02);
+  backdrop-filter:blur(12px);
+  -webkit-backdrop-filter:blur(12px);
+  border:1px solid rgba(255,255,255,.04);
+  border-radius:12px;
+}
+.glass-card{
+  background:rgba(255,255,255,.03);
+  backdrop-filter:blur(20px);
+  -webkit-backdrop-filter:blur(20px);
+  border:1px solid rgba(255,255,255,.06);
+  border-radius:14px;
+  transition:.3s;
+}
+.glass-card:hover{
+  background:rgba(255,255,255,.05);
+  border-color:rgba(139,92,246,.15);
+}
+
+.btn{
+  padding:8px 18px;border-radius:10px;border:none;cursor:pointer;
+  font-size:12px;font-weight:600;font-family:inherit;
+  transition:.2s;background:rgba(255,255,255,.04);color:rgba(255,255,255,.5);
+  border:1px solid rgba(255,255,255,.04);white-space:nowrap;
+}
+.btn:hover{background:rgba(255,255,255,.08);color:#fff}
+.btn-prim{
+  background:rgba(139,92,246,.2);color:#a78bfa;border-color:rgba(139,92,246,.15);
+}
+.btn-prim:hover{
+  background:rgba(139,92,246,.3);box-shadow:0 0 20px rgba(139,92,246,.1);
+}
+.btn-danger{
+  background:rgba(239,68,68,.15);color:#fca5a5;border-color:rgba(239,68,68,.1);
+}
+.btn-danger:hover{background:rgba(239,68,68,.25)}
+.btn-success{
+  background:rgba(34,197,94,.15);color:#86efac;border-color:rgba(34,197,94,.1);
+}
+.btn-success:hover{background:rgba(34,197,94,.25)}
+
+input,textarea,select{
+  background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.06);
+  border-radius:10px;padding:10px 14px;color:#fff;font-family:inherit;
+  font-size:13px;outline:none;transition:.2s;width:100%;
+}
+input:focus,textarea:focus,select:focus{
+  border-color:rgba(139,92,246,.3);
+  box-shadow:0 0 0 3px rgba(139,92,246,.05);
+}
+textarea{resize:vertical;min-height:80px}
+select option{background:#12121a;color:#fff}
+
+/* ===== LOGIN ===== */
+#loginScreen{
+  position:fixed;inset:0;z-index:100;
+  display:flex;align-items:center;justify-content:center;
+  background:#08080e;
+}
+#loginScreen .glow{
+  position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);
+  width:400px;height:400px;
+  background:radial-gradient(circle,rgba(139,92,246,.06),transparent 70%);
+  pointer-events:none;
+}
+.login-box{width:340px;padding:32px;text-align:center;position:relative;z-index:1}
+.login-box h1{font-size:14px;font-weight:300;letter-spacing:3px;color:rgba(255,255,255,.15);margin-bottom:4px;text-transform:uppercase}
+.login-box .icon{font-size:36px;margin-bottom:8px;display:block}
+.login-box p{font-size:10px;color:rgba(255,255,255,.08);margin-bottom:24px;letter-spacing:2px}
+.login-box input{text-align:center;font-size:16px;letter-spacing:8px;padding:14px;margin-bottom:16px}
+.login-box .btn{width:100%;padding:12px;font-size:13px}
+.login-box .error{font-size:11px;color:#fca5a5;margin-top:12px;min-height:16px;opacity:0;transition:.3s}
+.login-box .error.show{opacity:1}
+
+/* ===== APP ===== */
+#app{display:none;width:100%;height:100vh;position:relative;z-index:1;flex-direction:column}
+.app-header{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:18px 28px;background:rgba(255,255,255,.02);
+  backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);
+  border-bottom:1px solid rgba(255,255,255,.04);flex-shrink:0;
+}
+.app-header .logo{font-size:11px;font-weight:300;letter-spacing:2px;color:rgba(255,255,255,.12)}
+.app-header .logo span{color:#a78bfa;font-weight:600}
+.app-header .nav{display:flex;gap:4px}
+.app-header .nav .tab{
+  padding:6px 16px;border-radius:8px;cursor:pointer;font-size:12px;
+  font-weight:500;color:rgba(255,255,255,.2);transition:.2s;border:none;background:transparent;font-family:inherit;
+}
+.app-header .nav .tab:hover{color:rgba(255,255,255,.5);background:rgba(255,255,255,.03)}
+.app-header .nav .tab.active{color:#a78bfa;background:rgba(139,92,246,.1)}
+.app-content{flex:1;overflow-y:auto;padding:28px;display:flex;flex-direction:column;gap:20px}
+
+/* ===== DEVLOGS ===== */
+.section{display:none;flex-direction:column;gap:16px}
+.section.active{display:flex}
+.section-header{
+  display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;
+}
+.section-header h2{font-size:18px;font-weight:600;color:rgba(255,255,255,.85)}
+.section-header .filters{display:flex;gap:8px;align-items:center}
+.section-header .filters select{width:auto;padding:6px 12px;font-size:11px;min-width:120px}
+
+.devlog-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:16px}
+.devlog-card{padding:20px;cursor:default;transition:.3s}
+.devlog-card .meta{display:flex;align-items:center;gap:8px;margin-bottom:10px;flex-wrap:wrap}
+.devlog-card .cat{font-size:9px;padding:2px 8px;border-radius:4px;background:rgba(139,92,246,.12);color:#a78bfa;text-transform:uppercase;letter-spacing:.5px}
+.devlog-card .date{font-size:10px;color:rgba(255,255,255,.15)}
+.devlog-card h3{font-size:15px;font-weight:600;margin-bottom:8px;color:#fff}
+.devlog-card .preview{font-size:12px;color:rgba(255,255,255,.4);line-height:1.5;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+.devlog-card .preview img{display:none}
+.devlog-card .actions{display:flex;gap:6px;margin-top:12px}
+.devlog-card .actions .btn{padding:4px 10px;font-size:10px}
+
+/* ===== ARCHIVOS ===== */
+.file-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px}
+.file-card{padding:20px;transition:.3s}
+.file-card .file-icon{font-size:32px;margin-bottom:8px;display:block}
+.file-card h3{font-size:14px;font-weight:600;margin-bottom:2px}
+.file-card .sub1{font-size:12px;color:rgba(255,255,255,.3);margin-bottom:2px}
+.file-card .sub2{font-size:11px;color:rgba(255,255,255,.15);margin-bottom:10px}
+.file-card .file-meta{font-size:10px;color:rgba(255,255,255,.1);margin-bottom:10px}
+.file-card .actions{display:flex;gap:6px}
+.file-card .actions .btn{padding:4px 10px;font-size:10px}
+
+/* ===== MODAL ===== */
+.modal-overlay{
+  position:fixed;inset:0;z-index:50;display:none;
+  align-items:center;justify-content:center;
+  background:rgba(0,0,0,.6);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);
+}
+.modal-overlay.on{display:flex;animation:fadeIn .2s}
+.modal-box{
+  width:90%;max-width:580px;max-height:85vh;overflow-y:auto;
+  padding:28px;position:relative;
+}
+.modal-box h3{font-size:16px;font-weight:600;margin-bottom:16px;color:rgba(255,255,255,.9)}
+.modal-box .field{margin-bottom:14px}
+.modal-box .field label{display:block;font-size:10px;color:rgba(255,255,255,.15);margin-bottom:4px;text-transform:uppercase;letter-spacing:.5px;font-weight:500}
+.modal-box .field-row{display:flex;gap:10px}
+.modal-box .field-row .field{flex:1}
+.modal-box .modal-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:20px}
+
+/* ===== EMPTY STATE ===== */
+.empty-state{
+  text-align:center;padding:60px 20px;
+}
+.empty-state .icon{font-size:40px;margin-bottom:12px;opacity:.1}
+.empty-state p{font-size:13px;color:rgba(255,255,255,.08)}
+
+/* ===== RENDERED DEVLOG CONTENT ===== */
+.devlog-content{font-size:13px;line-height:1.7;color:rgba(255,255,255,.75)}
+.devlog-content strong{color:#fff;font-weight:600}
+.devlog-content em{color:rgba(255,255,255,.6)}
+.devlog-content h2{font-size:16px;font-weight:700;color:#fff;margin:16px 0 8px}
+.devlog-content h3{font-size:14px;font-weight:600;color:rgba(255,255,255,.9);margin:12px 0 6px}
+.devlog-content code{
+  background:rgba(139,92,246,.1);color:#a78bfa;padding:1px 5px;border-radius:4px;
+  font-size:12px;font-family:'Inter',monospace;
+}
+.devlog-content pre{
+  background:rgba(0,0,0,.3);border:1px solid rgba(255,255,255,.04);border-radius:8px;
+  padding:14px;overflow-x:auto;margin:10px 0;
+}
+.devlog-content pre code{background:transparent;padding:0;color:rgba(255,255,255,.7)}
+.devlog-content img{max-width:100%;border-radius:8px;margin:10px 0}
+.devlog-content .video-wrap{position:relative;padding-bottom:56.25%;height:0;overflow:hidden;border-radius:8px;margin:10px 0}
+.devlog-content .video-wrap iframe{position:absolute;top:0;left:0;width:100%;height:100%;border:none;border-radius:8px}
+.devlog-content ul,.devlog-content ol{padding-left:20px;margin:8px 0}
+.devlog-content li{margin:4px 0}
+.devlog-content a{color:#a78bfa;text-decoration:none}
+.devlog-content a:hover{text-decoration:underline}
+.devlog-content blockquote{
+  border-left:2px solid rgba(139,92,246,.3);padding:8px 14px;margin:10px 0;
+  background:rgba(139,92,246,.03);border-radius:0 8px 8px 0;color:rgba(255,255,255,.5);
+}
+
+/* ===== VIEW DEVLOG DETAIL ===== */
+.view-card{padding:28px}
+.view-card .back{display:inline-flex;align-items:center;gap:6px;font-size:11px;color:rgba(255,255,255,.2);cursor:pointer;margin-bottom:16px;transition:.2s;border:none;background:transparent;font-family:inherit}
+.view-card .back:hover{color:rgba(255,255,255,.6)}
+.view-card .view-meta{display:flex;align-items:center;gap:10px;margin-bottom:12px;flex-wrap:wrap}
+.view-card .view-title{font-size:22px;font-weight:700;margin-bottom:16px}
+.view-card .view-cat{font-size:10px;padding:3px 10px;border-radius:4px;background:rgba(139,92,246,.12);color:#a78bfa}
+
+/* ===== ANIMATIONS ===== */
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+@keyframes slideUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+.slide-up{animation:slideUp .3s ease}
+
+/* ===== TOAST ===== */
+.toast-container{position:fixed;bottom:24px;right:24px;z-index:200;display:flex;flex-direction:column;gap:8px}
+.toast{
+  padding:12px 20px;border-radius:10px;font-size:12px;font-weight:500;
+  background:rgba(255,255,255,.04);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);
+  border:1px solid rgba(255,255,255,.06);color:rgba(255,255,255,.8);
+  animation:slideUp .2s ease;
+}
+
+@media(max-width:640px){
+  .app-header{padding:12px 16px;flex-wrap:wrap;gap:8px}
+  .app-content{padding:16px}
+  .devlog-grid{grid-template-columns:1fr}
+  .file-grid{grid-template-columns:1fr}
+  .modal-box{padding:20px;width:95%}
+  .section-header{flex-direction:column;align-items:flex-start}
+  .section-header .filters{width:100%}
+  .section-header .filters select{flex:1}
+}
+</style>
+</head>
+<body>
+
+<div class="bg-glow"></div>
+<div class="bg-glow2"></div>
+
+<!-- LOGIN -->
+<div id="loginScreen">
+  <div class="glow"></div>
+  <div class="glass login-box slide-up">
+    <span class="icon">&#9670;</span>
+    <h1>Kafer Projects</h1>
+    <p>INSERTAR CODIGO</p>
+    <input type="password" id="codeInput" maxlength="30" placeholder="············" autocomplete="off">
+    <button class="btn btn-prim" id="loginBtn">ACCEDER</button>
+    <div class="error" id="loginError">Codigo incorrecto</div>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="app">
+  <div class="app-header">
+    <div class="logo">KAFER <span>PROJECTS</span> ADMIN</div>
+    <div class="nav">
+      <button class="tab active" data-tab="devlogs">Devlogs</button>
+      <button class="tab" data-tab="archivos">Archivos</button>
+    </div>
+  </div>
+
+  <div class="app-content">
+    <!-- DEVLOGS -->
+    <div class="section active" id="section-devlogs">
+      <div class="section-header">
+        <h2>Devlogs</h2>
+        <div class="filters">
+          <select id="catFilter"><option value="">Todas las categorias</option></select>
+          <button class="btn btn-prim" onclick="openModal('devlog')">+ Nuevo Devlog</button>
+        </div>
+      </div>
+      <div id="devlogList"></div>
+    </div>
+
+    <!-- VIEW DEVLOG -->
+    <div class="section" id="section-view">
+      <div class="glass-card view-card" id="viewContent"></div>
+    </div>
+
+    <!-- ARCHIVOS -->
+    <div class="section" id="section-archivos">
+      <div class="section-header">
+        <h2>Archivos</h2>
+        <button class="btn btn-prim" onclick="openModal('file')">+ Subir Archivo</button>
+      </div>
+      <div id="fileList"></div>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL -->
+<div class="modal-overlay" id="modalOverlay">
+  <div class="glass modal-box" id="modalBox"></div>
+</div>
+
+<!-- TOAST -->
+<div class="toast-container" id="toastContainer"></div>
+
+<script>
+// ===== SOUND MANAGER =====
+const Sound = {
+  ctx: null,
+  init(){
+    if(!this.ctx) this.ctx = new (window.AudioContext || window.webkitAudioContext)()
+  },
+  _play(freq,dur,type='sine',vol=.08){
+    try{
+      this.init()
+      const o=this.ctx.createOscillator(),g=this.ctx.createGain()
+      o.type=type;o.frequency.value=freq;g.gain.value=vol
+      g.gain.exponentialRampToValueAtTime(.001,this.ctx.currentTime+dur)
+      o.connect(g);g.connect(this.ctx.destination)
+      o.start();o.stop(this.ctx.currentTime+dur)
+    }catch(e){}
+  },
+  click(){this._play(800,.08,'sine',.06)},
+  success(){
+    this.init()
+    try{
+      const t=this.ctx.currentTime
+      const o1=this.ctx.createOscillator(),o2=this.ctx.createOscillator()
+      const g1=this.ctx.createGain(),g2=this.ctx.createGain()
+      o1.type='sine';o2.type='sine'
+      o1.frequency.setValueAtTime(523,t);o1.frequency.setValueAtTime(659,t+.1);o1.frequency.setValueAtTime(784,t+.2)
+      o2.frequency.setValueAtTime(659,t+.05);o2.frequency.setValueAtTime(784,t+.15);o2.frequency.setValueAtTime(1047,t+.25)
+      g1.gain.setValueAtTime(.06,t);g1.gain.exponentialRampToValueAtTime(.001,t+.35)
+      g2.gain.setValueAtTime(.04,t+.05);g2.gain.exponentialRampToValueAtTime(.001,t+.35)
+      o1.connect(g1);o2.connect(g2);g1.connect(this.ctx.destination);g2.connect(this.ctx.destination)
+      o1.start(t);o1.stop(t+.35);o2.start(t+.05);o2.stop(t+.35)
+    }catch(e){}
+  },
+  delete(){this._play(400,.15,'sawtooth',.04);setTimeout(()=>this._play(300,.15,'sawtooth',.03),100)},
+  open(){this._play(600,.1,'sine',.05);setTimeout(()=>this._play(800,.1,'sine',.04),80)},
+  error(){this._play(200,.2,'square',.04);setTimeout(()=>this._play(150,.2,'square',.03),150)}
+}
+
+// ===== DB =====
+const DB = {
+  _db: null,
+  _init(){
+    return new Promise((res,rej)=>{
+      const r=indexedDB.open('kaferProjectsAdmin',1)
+      r.onupgradeneeded=e=>{
+        const db=e.target.result
+        if(!db.objectStoreNames.contains('devlogs')) db.createObjectStore('devlogs',{keyPath:'id',autoIncrement:true})
+        if(!db.objectStoreNames.contains('categories')) db.createObjectStore('categories',{keyPath:'id',autoIncrement:true})
+        if(!db.objectStoreNames.contains('files')) db.createObjectStore('files',{keyPath:'id',autoIncrement:true})
+        if(!db.objectStoreNames.contains('settings')) db.createObjectStore('settings',{keyPath:'key'})
+      }
+      r.onsuccess=e=>{this._db=e.target.result;res()}
+      r.onerror=e=>rej(e)
+    })
+  },
+  _tx(store,mode='readonly'){return this._db.transaction(store,mode).objectStore(store)},
+
+  async init(){await this._init()},
+
+  // Settings
+  async getCode(){const r=await this._tx('settings').get('code');return r?r.value:'kaferprojectsadmin'},
+  async setCode(v){await this._tx('settings','readwrite').put({key:'code',value:v})},
+
+  // Categories
+  async getCats(){const r=await this._tx('categories').getAll();return r||[]},
+  async addCat(name){return new Promise((res,rej)=>{const r=this._tx('categories','readwrite').add({name,createdAt:Date.now()});r.onsuccess=e=>res(e.target.result);r.onerror=e=>rej(e)})},
+  async delCat(id){await this._tx('categories','readwrite').delete(id)},
+
+  // Devlogs
+  async getDevlogs(){const r=await this._tx('devlogs').getAll();return (r||[]).sort((a,b)=>b.createdAt-a.createdAt)},
+  async getDevlog(id){return this._tx('devlogs').get(Number(id))},
+  async addDevlog(d){return new Promise((res,rej)=>{const r=this._tx('devlogs','readwrite').add(d);r.onsuccess=e=>res(e.target.result);r.onerror=e=>rej(e)})},
+  async updateDevlog(d){await this._tx('devlogs','readwrite').put(d)},
+  async delDevlog(id){await this._tx('devlogs','readwrite').delete(Number(id))},
+
+  // Files
+  async getFiles(){const r=await this._tx('files').getAll();return (r||[]).sort((a,b)=>b.createdAt-a.createdAt)},
+  async getFile(id){return this._tx('files').get(Number(id))},
+  async addFile(d){return new Promise((res,rej)=>{const r=this._tx('files','readwrite').add(d);r.onsuccess=e=>res(e.target.result);r.onerror=e=>rej(e)})},
+  async updateFile(d){await this._tx('files','readwrite').put(d)},
+  async delFile(id){await this._tx('files','readwrite').delete(Number(id))}
+}
+
+// ===== STATE =====
+let currentSection = 'devlogs'
+let viewingDevlog = null
+let catFilter = ''
+
+// ===== TOAST =====
+function toast(msg){
+  const c=document.getElementById('toastContainer')
+  const el=document.createElement('div');el.className='toast';el.textContent=msg
+  c.appendChild(el)
+  setTimeout(()=>{el.style.opacity='0';el.style.transition='.3s';setTimeout(()=>el.remove(),300)},2500)
+}
+
+// ===== RENDER HELPERS =====
+function renderContent(text){
+  if(!text) return ''
+  let html=text
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+    .replace(/```([\s\S]*?)```/g,'<pre><code>$1</code></pre>')
+    .replace(/`([^`]+)`/g,'<code>$1</code>')
+    .replace(/\*\*\*(.+?)\*\*\*/g,'<strong><em>$1</em></strong>')
+    .replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>')
+    .replace(/\*(.+?)\*/g,'<em>$1</em>')
+    .replace(/^### (.+)$/gm,'<h3>$1</h3>')
+    .replace(/^## (.+)$/gm,'<h2>$1</h2>')
+    .replace(/!\[(.*?)\]\((.*?)\)/g,(m,alt,url)=>{
+      if(url.startsWith('data:')||url.match(/\.(jpg|jpeg|png|gif|webp|svg)/i)||url.startsWith('http'))
+        return `<img src="${url}" alt="${alt}" loading="lazy">`
+      return m
+    })
+    .replace(/(?:https?:\/\/)?(?:www\.)?(?:youtube\.com\/watch\?v=|youtu\.be\/)([\w-]+)/g,'<div class="video-wrap"><iframe src="https://www.youtube.com/embed/$1" allowfullscreen loading="lazy"></iframe></div>')
+    .replace(/^> (.+)$/gm,'<blockquote>$1</blockquote>')
+    .replace(/^- (.+)$/gm,'<li>$1</li>')
+    .replace(/(<li>.*<\/li>)/s,'<ul>$1</ul>')
+    .replace(/\n\n/g,'</p><p>')
+    .replace(/\n/g,'<br>')
+  return '<p>'+html+'</p>'
+}
+
+function formatDate(ts){
+  const d=new Date(ts)
+  return d.toLocaleDateString('es-ES',{year:'numeric',month:'short',day:'numeric'})
+}
+
+function formatSize(bytes){
+  if(!bytes) return '0 B'
+  const u=['B','KB','MB','GB'],i=Math.floor(Math.log(bytes)/Math.log(1024))
+  return (bytes/Math.pow(1024,i)).toFixed(1)+' '+u[i]
+}
+
+function getFileIcon(type,name){
+  if(!type&&!name) return '📄'
+  const t=(type||name||'').toLowerCase()
+  if(t.includes('image')||t.match(/\.(png|jpg|jpeg|gif|webp|svg|ico)$/)) return '🖼'
+  if(t.includes('video')||t.match(/\.(mp4|webm|avi|mov|mkv)$/)) return '🎬'
+  if(t.includes('audio')||t.match(/\.(mp3|wav|ogg|flac)$/)) return '🎵'
+  if(t.includes('zip')||t.includes('rar')||t.includes('tar')||t.includes('7z')||t.match(/\.(zip|rar|tar|gz|7z)$/)) return '📦'
+  if(t.includes('pdf')||t.match(/\.pdf$/)) return '📕'
+  if(t.includes('text')||t.includes('json')||t.includes('javascript')||t.match(/\.(txt|json|js|ts|html|css|md)$/)) return '📄'
+  return '📎'
+}
+
+// ===== MODAL =====
+function openModal(type,editData){
+  Sound.click()
+  const overlay=document.getElementById('modalOverlay')
+  const box=document.getElementById('modalBox')
+  
+  if(type==='devlog'){
+    const e=editData||{}
+    const cats=catList
+    box.innerHTML=`
+      <h3>${e.id?'Editar':'Nuevo'} Devlog</h3>
+      <div class="field">
+        <label>Titulo</label>
+        <input id="mTitle" value="${(e.title||'').replace(/"/g,'&quot;')}">
+      </div>
+      <div class="field-row">
+        <div class="field">
+          <label>Fecha</label>
+          <input type="date" id="mDate" value="${e.date||new Date().toISOString().split('T')[0]}">
+        </div>
+        <div class="field">
+          <label>Categoria</label>
+          <select id="mCat">
+            <option value="">Sin categoria</option>
+            ${cats.map(c=>`<option value="${c.name}"${e.category===c.name?' selected':''}>${c.name}</option>`).join('')}
+            <option value="__new__">+ Nueva categoria</option>
+          </select>
+        </div>
+      </div>
+      <div class="field">
+        <label>Contenido</label>
+        <textarea id="mContent" style="min-height:180px">${(e.content||'').replace(/"/g,'&quot;')}</textarea>
+      </div>
+      <div class="field" style="font-size:10px;color:rgba(255,255,255,.1);line-height:1.6">
+        **negrita** *cursiva* \`codigo\` ## titulo ## header<br>
+        ![](url-imagen) URL de YouTube se incrusta sola<br>
+        > cita - lista
+      </div>
+      <div class="modal-actions">
+        <button class="btn" onclick="closeModal()">Cancelar</button>
+        <button class="btn btn-prim" onclick="saveDevlog('${e.id||''}')">Guardar</button>
+      </div>
+    `
+  }else if(type==='file'){
+    const e=editData||{}
+    box.innerHTML=`
+      <h3>${e.id?'Editar':'Subir'} Archivo</h3>
+      <div class="field">
+        <label>Titulo</label>
+        <input id="fTitle" value="${(e.title||'').replace(/"/g,'&quot;')}">
+      </div>
+      <div class="field">
+        <label>Subtitulo 1</label>
+        <input id="fSub1" value="${(e.sub1||'').replace(/"/g,'&quot;')}">
+      </div>
+      <div class="field">
+        <label>Subtitulo 2</label>
+        <input id="fSub2" value="${(e.sub2||'').replace(/"/g,'&quot;')}">
+      </div>
+      <div class="field">
+        <label>${e.id?'Cambiar archivo (opcional)':'Archivo'}</label>
+        <input type="file" id="fFile">
+      </div>
+      <div class="modal-actions">
+        <button class="btn" onclick="closeModal()">Cancelar</button>
+        <button class="btn btn-prim" onclick="saveFile('${e.id||''}')">${e.id?'Guardar Cambios':'Subir'}</button>
+      </div>
+    `
+  }else if(type==='cat'){
+    box.innerHTML=`
+      <h3>Nueva Categoria</h3>
+      <div class="field">
+        <label>Nombre</label>
+        <input id="cName" placeholder="Nombre de la categoria">
+      </div>
+      <div class="modal-actions">
+        <button class="btn" onclick="closeModal()">Cancelar</button>
+        <button class="btn btn-prim" onclick="saveCat()">Crear</button>
+      </div>
+    `
+  }
+  overlay.classList.add('on')
+}
+
+function closeModal(){
+  document.getElementById('modalOverlay').classList.remove('on')
+}
+
+document.getElementById('modalOverlay').addEventListener('click',e=>{
+  if(e.target===e.currentTarget) closeModal()
+})
+
+// ===== DEVLOGS =====
+let catList=[]
+
+async function loadCats(){
+  catList=await DB.getCats()
+  const sel=document.getElementById('catFilter')
+  const cur=sel.value
+  sel.innerHTML='<option value="">Todas las categorias</option>'
+  catList.forEach(c=>{const o=document.createElement('option');o.value=c.name;o.textContent=c.name;sel.appendChild(o)})
+  sel.value=cur
+}
+
+async function saveDevlog(id){
+  const title=document.getElementById('mTitle').value.trim()
+  const date=document.getElementById('mDate').value
+  const catSel=document.getElementById('mCat')
+  let category=catSel.value
+  const content=document.getElementById('mContent').value.trim()
+
+  if(catSel.value==='__new__'){
+    closeModal()
+    openModal('cat')
+    return
+  }
+
+  if(!title){toast('El titulo es obligatorio');return}
+  if(!content){toast('El contenido es obligatorio');return}
+
+  if(id){
+    const d=await DB.getDevlog(id)
+    d.title=title;d.date=date;d.category=category;d.content=content;d.updatedAt=Date.now()
+    await DB.updateDevlog(d)
+    Sound.success()
+    toast('Devlog actualizado')
+  }else{
+    await DB.addDevlog({title,date,category,content,createdAt:Date.now(),updatedAt:Date.now()})
+    Sound.success()
+    toast('Devlog creado')
+  }
+  closeModal()
+  renderDevlogs()
+}
+
+async function deleteDevlog(id){
+  Sound.delete()
+  if(!confirm('¿Eliminar este devlog?'))return
+  await DB.delDevlog(id)
+  toast('Devlog eliminado')
+  if(viewingDevlog===id){viewingDevlog=null;showSection('devlogs')}
+  renderDevlogs()
+}
+
+async function viewDevlog(id){
+  Sound.open()
+  const d=await DB.getDevlog(id)
+  if(!d){toast('Devlog no encontrado');return}
+  viewingDevlog=id
+  const el=document.getElementById('viewContent')
+  el.innerHTML=`
+    <button class="back" onclick="viewingDevlog=null;showSection('devlogs')">← Volver</button>
+    <div class="view-meta">
+      ${d.category?`<span class="view-cat">${d.category}</span>`:''}
+      <span style="font-size:11px;color:rgba(255,255,255,.15)">${formatDate(d.date||d.createdAt)}</span>
+    </div>
+    <h1 class="view-title">${d.title}</h1>
+    <div class="devlog-content">${renderContent(d.content)}</div>
+    <div style="margin-top:20px;display:flex;gap:8px">
+      <button class="btn btn-prim" onclick="openModal('devlog',d)">Editar</button>
+      <button class="btn btn-danger" onclick="deleteDevlog('${d.id}')">Eliminar</button>
+    </div>
+  `
+  // Store reference for edit
+  el.querySelector('.btn-prim').onclick=()=>openModal('devlog',d)
+  showSection('view')
+}
+
+async function renderDevlogs(){
+  const devlogs=await DB.getDevlogs()
+  const el=document.getElementById('devlogList')
+  
+  const filtered=catFilter?devlogs.filter(d=>d.category===catFilter):devlogs
+  
+  if(filtered.length===0){
+    el.innerHTML=`<div class="empty-state"><div class="icon">&#9998;</div><p>${catFilter?'No hay devlogs en esta categoria':'No hay devlogs aun. Crea el primero!'}</p></div>`
+    return
+  }
+  
+  el.innerHTML=`<div class="devlog-grid">${filtered.map(d=>`
+    <div class="glass-card devlog-card slide-up" onclick="viewDevlog('${d.id}')">
+      <div class="meta">
+        ${d.category?`<span class="cat">${d.category}</span>`:''}
+        <span class="date">${formatDate(d.date||d.createdAt)}</span>
+      </div>
+      <h3>${d.title}</h3>
+      <div class="preview">${d.content.replace(/<[^>]*>/g,'').substring(0,200)}</div>
+    </div>
+  `).join('')}</div>`
+}
+
+// ===== CATEGORY =====
+async function saveCat(){
+  const name=document.getElementById('cName').value.trim()
+  if(!name){toast('Nombre requerido');return}
+  await DB.addCat(name)
+  Sound.success()
+  toast('Categoria creada')
+  closeModal()
+  await loadCats()
+  openModal('devlog')
+}
+
+document.getElementById('catFilter').addEventListener('change',e=>{
+  catFilter=e.target.value
+  renderDevlogs()
+})
+
+// ===== FILES =====
+async function saveFile(id){
+  const title=document.getElementById('fTitle').value.trim()
+  const sub1=document.getElementById('fSub1').value.trim()
+  const sub2=document.getElementById('fSub2').value.trim()
+  const fileInput=document.getElementById('fFile')
+  const file=fileInput.files[0]
+
+  if(!title){toast('El titulo es obligatorio');return}
+  if(!id&&!file){toast('Selecciona un archivo');return}
+
+  if(id&&!file){
+    const d=await DB.getFile(id)
+    d.title=title;d.sub1=sub1;d.sub2=sub2;d.updatedAt=Date.now()
+    await DB.updateFile(d)
+    Sound.success()
+    toast('Archivo actualizado')
+  }else{
+    const buf=await file.arrayBuffer()
+    const d={title,sub1,sub2,fileName:file.name,fileType:file.type,fileSize:file.size,fileData:buf,createdAt:Date.now(),updatedAt:Date.now()}
+    if(id){
+      d.id=Number(id)
+      const old=await DB.getFile(id)
+      if(old){d.createdAt=old.createdAt}
+      await DB.updateFile(d)
+      Sound.success()
+      toast('Archivo actualizado')
+    }else{
+      await DB.addFile(d)
+      Sound.success()
+      toast('Archivo subido')
+    }
+  }
+  closeModal()
+  renderFiles()
+}
+
+async function deleteFile(id){
+  Sound.delete()
+  if(!confirm('¿Eliminar este archivo?'))return
+  await DB.delFile(id)
+  toast('Archivo eliminado')
+  renderFiles()
+}
+
+async function downloadFile(id){
+  Sound.click()
+  const d=await DB.getFile(id)
+  if(!d||!d.fileData){toast('Archivo no disponible');return}
+  const blob=new Blob([d.fileData],{type:d.fileType||'application/octet-stream'})
+  const url=URL.createObjectURL(blob)
+  const a=document.createElement('a');a.href=url;a.download=d.fileName||'download'
+  document.body.appendChild(a);a.click();a.remove()
+  setTimeout(()=>URL.revokeObjectURL(url),10000)
+}
+
+async function renderFiles(){
+  const files=await DB.getFiles()
+  const el=document.getElementById('fileList')
+  
+  if(files.length===0){
+    el.innerHTML=`<div class="empty-state"><div class="icon">&#128230;</div><p>No hay archivos subidos</p></div>`
+    return
+  }
+  
+  el.innerHTML=`<div class="file-grid">${files.map(f=>{
+    const icon=getFileIcon(f.fileType,f.fileName)
+    return `<div class="glass-card file-card">
+      <span class="file-icon">${icon}</span>
+      <h3>${f.title}</h3>
+      ${f.sub1?`<div class="sub1">${f.sub1}</div>`:''}
+      ${f.sub2?`<div class="sub2">${f.sub2}</div>`:''}
+      <div class="file-meta">${f.fileName||''} ${f.fileSize?`(${formatSize(f.fileSize)})`:''}</div>
+      <div class="actions">
+        <button class="btn btn-success" onclick="downloadFile('${f.id}')">Descargar</button>
+        <button class="btn btn-prim" onclick="openModal('file',${JSON.stringify({id:f.id,title:f.title,sub1:f.sub1||'',sub2:f.sub2||''}).replace(/"/g,'&quot;')})">Editar</button>
+        <button class="btn btn-danger" onclick="deleteFile('${f.id}')">Eliminar</button>
+      </div>
+    </div>`
+  }).join('')}</div>`
+}
+
+// ===== SECTION NAV =====
+function showSection(name){
+  currentSection=name
+  document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'))
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'))
+  document.getElementById(`section-${name}`).classList.add('active')
+  document.querySelector(`[data-tab="${name}"]`).classList.add('active')
+  
+  if(name==='devlogs') renderDevlogs()
+  if(name==='archivos') renderFiles()
+}
+
+document.querySelectorAll('.tab').forEach(tab=>{
+  tab.addEventListener('click',()=>{
+    Sound.click()
+    showSection(tab.dataset.tab)
+  })
+})
+
+// ===== LOGIN =====
+async function checkLogin(){
+  const code=document.getElementById('codeInput').value.trim()
+  const correct=await DB.getCode()
+  if(code===correct){
+    Sound.success()
+    document.getElementById('loginScreen').style.display='none'
+    document.getElementById('app').style.display='flex'
+    initApp()
+  }else{
+    Sound.error()
+    const el=document.getElementById('loginError')
+    el.classList.add('show')
+    setTimeout(()=>el.classList.remove('show'),2000)
+  }
+}
+
+document.getElementById('loginBtn').addEventListener('click',checkLogin)
+document.getElementById('codeInput').addEventListener('keydown',e=>{if(e.key==='Enter')checkLogin()})
+
+// ===== INIT =====
+async function initApp(){
+  await loadCats()
+  renderDevlogs()
+  renderFiles()
+}
+
+// ===== START =====
+DB.init().then(()=>{
+  // Check if already logged in (session storage)
+  document.getElementById('codeInput').focus()
+}).catch(e=>{
+  document.body.innerHTML=`<div style="padding:40px;text-align:center;color:#fca5a5">Error al iniciar base de datos: ${e.message}</div>`
+})
+
+// ===== SOUND ON FIRST INTERACTION =====
+document.addEventListener('click',()=>Sound.init(),{once:true})
+document.addEventListener('touchstart',()=>Sound.init(),{once:true})
+
+console.log('%c Kafer Projects ADMIN ','background:#8b5cf6;color:#000;font-size:16px;font-weight:bold;padding:8px 12px;border-radius:4px')
+console.log('%c glassmorphism + indexedDB + web audio ','color:rgba(255,255,255,.2);font-size:11px')
+</script>
+</body>
+</html>
