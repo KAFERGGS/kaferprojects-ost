@@ -357,6 +357,8 @@ const Sound = {
 }
 
 // ===== DB =====
+function tx(store,mode){return DB._db.transaction(store,mode).objectStore(store)}
+function req(r){return new Promise((res,rej)=>{r.onsuccess=e=>res(e.target.result);r.onerror=e=>rej(e.error||'DB error')})}
 const DB = {
   _db: null,
   _init(){
@@ -373,32 +375,26 @@ const DB = {
       r.onerror=e=>rej(e)
     })
   },
-  _tx(store,mode='readonly'){return this._db.transaction(store,mode).objectStore(store)},
-
   async init(){await this._init()},
 
-  // Settings
-  async getCode(){const r=await this._tx('settings').get('code');return r?r.value:'kaferprojectsadmin'},
-  async setCode(v){await this._tx('settings','readwrite').put({key:'code',value:v})},
+  async getCode(){const r=await req(tx('settings').get('code'));return r?r.value:'kaferprojectsadmin'},
+  async setCode(v){await req(tx('settings','readwrite').put({key:'code',value:v}))},
 
-  // Categories
-  async getCats(){const r=await this._tx('categories').getAll();return r||[]},
-  async addCat(name){return new Promise((res,rej)=>{const r=this._tx('categories','readwrite').add({name,createdAt:Date.now()});r.onsuccess=e=>res(e.target.result);r.onerror=e=>rej(e)})},
-  async delCat(id){await this._tx('categories','readwrite').delete(id)},
+  async getCats(){return(await req(tx('categories').getAll()))||[]},
+  async addCat(n){return req(tx('categories','readwrite').add({name:n,createdAt:Date.now()}))},
+  async delCat(id){await req(tx('categories','readwrite').delete(id))},
 
-  // Devlogs
-  async getDevlogs(){const r=await this._tx('devlogs').getAll();return (r||[]).sort((a,b)=>b.createdAt-a.createdAt)},
-  async getDevlog(id){return this._tx('devlogs').get(Number(id))},
-  async addDevlog(d){return new Promise((res,rej)=>{const r=this._tx('devlogs','readwrite').add(d);r.onsuccess=e=>res(e.target.result);r.onerror=e=>rej(e)})},
-  async updateDevlog(d){await this._tx('devlogs','readwrite').put(d)},
-  async delDevlog(id){await this._tx('devlogs','readwrite').delete(Number(id))},
+  async getDevlogs(){const r=(await req(tx('devlogs').getAll()))||[];return r.sort((a,b)=>b.createdAt-a.createdAt)},
+  async getDevlog(id){return req(tx('devlogs').get(Number(id)))},
+  async addDevlog(d){return req(tx('devlogs','readwrite').add(d))},
+  async updateDevlog(d){await req(tx('devlogs','readwrite').put(d))},
+  async delDevlog(id){await req(tx('devlogs','readwrite').delete(Number(id)))},
 
-  // Files
-  async getFiles(){const r=await this._tx('files').getAll();return (r||[]).sort((a,b)=>b.createdAt-a.createdAt)},
-  async getFile(id){return this._tx('files').get(Number(id))},
-  async addFile(d){return new Promise((res,rej)=>{const r=this._tx('files','readwrite').add(d);r.onsuccess=e=>res(e.target.result);r.onerror=e=>rej(e)})},
-  async updateFile(d){await this._tx('files','readwrite').put(d)},
-  async delFile(id){await this._tx('files','readwrite').delete(Number(id))}
+  async getFiles(){const r=(await req(tx('files').getAll()))||[];return r.sort((a,b)=>b.createdAt-a.createdAt)},
+  async getFile(id){return req(tx('files').get(Number(id)))},
+  async addFile(d){return req(tx('files','readwrite').add(d))},
+  async updateFile(d){await req(tx('files','readwrite').put(d))},
+  async delFile(id){await req(tx('files','readwrite').delete(Number(id)))}
 }
 
 // ===== STATE =====
@@ -775,18 +771,21 @@ document.querySelectorAll('.tab').forEach(tab=>{
 // ===== LOGIN =====
 async function checkLogin(){
   const code=document.getElementById('codeInput').value.trim()
-  const correct=await DB.getCode()
-  if(code===correct){
-    Sound.success()
-    document.getElementById('loginScreen').style.display='none'
-    document.getElementById('app').style.display='flex'
-    initApp()
-  }else{
-    Sound.error()
-    const el=document.getElementById('loginError')
-    el.classList.add('show')
-    setTimeout(()=>el.classList.remove('show'),2000)
-  }
+  try{
+    const correct=await DB.getCode()
+    if(code===correct){
+      Sound.success()
+      document.getElementById('loginScreen').style.display='none'
+      document.getElementById('app').style.display='flex'
+      initApp()
+      return
+    }
+  }catch(e){console.error('DB error',e)}
+  Sound.error()
+  const el=document.getElementById('loginError')
+  el.textContent='Codigo incorrecto'
+  el.classList.add('show')
+  setTimeout(()=>el.classList.remove('show'),2000)
 }
 
 document.getElementById('loginBtn').addEventListener('click',checkLogin)
