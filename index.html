@@ -307,14 +307,10 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);overflow:hid
 
 <script src="https://www.gstatic.com/firebasejs/11.0.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/11.0.1/firebase-auth-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/11.0.1/firebase-storage-compat.js"></script>
 <script>
 // ═══ FIREBASE ═══
 firebase.initializeApp({apiKey:"AIzaSyBIK0xBEJhey8b2j8LyJUyeE_VNfgbpeiE",authDomain:"kaferprojectsost.firebaseapp.com",projectId:"kaferprojectsost",storageBucket:"kaferprojectsost.firebasestorage.app",messagingSenderId:"965445618134",appId:"1:965445618134:web:8cdd6d4a7ca0daef1ffc77"});
 const db=firebase.firestore();
-const storage=firebase.storage();
-firebase.auth().signInAnonymously().catch(e=>console.error('Auth:',e));
 
 // ═══ STATE ═══
 let albums=[],curAlbum=null,isAdm=false;
@@ -330,7 +326,11 @@ let _kc=0;
 document.addEventListener('keydown',e=>{
   if(e.key==='k'||e.key==='K'){_kc++;if(_kc>=10){_kc=0;const c=prompt('Código de administrador:');if(c==='KaferOST1405'){isAdm=true;document.getElementById('adminBadge').style.display='inline';document.getElementById('adminBtn').style.display='flex';document.getElementById('addAlbumBtn').style.display='flex';document.getElementById('importBtn').style.display='flex';rSB();if(curAlbum)renderA(curAlbum)}else alert('Código incorrecto')}}
 });
-document.getElementById('adminBtn').addEventListener('click',()=>{alert('Ya eres admin! Los archivos se suben a Firebase Storage.')});
+document.getElementById('adminBtn').addEventListener('click',()=>{
+  const t=localStorage.getItem('kf_gh')||''
+  const n=prompt('🔑 Token de GitHub (con permisos "repo"):\n\nhttps://github.com/settings/tokens\n\nDejá vacío para borrar el token guardado.',t)
+  if(n!==null){if(n.trim())localStorage.setItem('kf_gh',n.trim());else localStorage.removeItem('kf_gh')}
+});
 
 // ═══ DATA ═══
 function escucha(){db.collection('albums').onSnapshot(()=>loadD())}
@@ -421,14 +421,26 @@ au.addEventListener('ended',nxS);
 au.addEventListener('play',()=>{pl=true;upP()});
 au.addEventListener('pause',()=>{pl=false;upP()});
 
-// ═══ FIREBASE STORAGE ═══
+// ═══ FILE UPLOAD (GitHub) ═══
+function ghToken(){let t=localStorage.getItem('kf_gh');if(!t){t=prompt('🔑 Necesitás un token de GitHub para subir archivos.\n\n1. Andá a https://github.com/settings/tokens\n2. Creá un token con permisos "repo"\n3. Copialo y pegalo acá:\n\n(Solo se guarda en tu navegador)');if(!t)return null;localStorage.setItem('kf_gh',t)}return t}
 async function uploadFile(path,blob){
-  const ref=storage.ref(path);
-  const snapshot=await ref.put(blob);
-  return await ref.getDownloadURL();
+  const t=ghToken();if(!t)throw new Error('Token requerido')
+  const data=await new Promise((ok,no)=>{const r=new FileReader();r.onload=()=>ok(r.result.split(',')[1]);r.onerror=no;r.readAsDataURL(blob)})
+  const r=await fetch('https://api.github.com/repos/KAFERGGS/kaferprojects-ost/contents/'+path,{
+    method:'PUT',headers:{'Accept':'application/vnd.github.v3+json','Authorization':'Bearer '+t,'Content-Type':'application/json'},
+    body:JSON.stringify({message:'Add '+path,content:data,branch:'main'})
+  })
+  const j=await r.json()
+  if(!r.ok)throw new Error('Error GitHub: '+(j.message||r.status)+'\n\nProbablemente el token no es válido o no tiene permisos "repo".\nAndá a https://github.com/settings/tokens y creá uno nuevo.')
+  return 'https://raw.githubusercontent.com/KAFERGGS/kaferprojects-ost/main/'+path
 }
 async function deleteFile(path){
-  try{await storage.ref(path).delete()}catch(e){}
+  try{
+    const t=ghToken();if(!t)return
+    const r=await fetch('https://api.github.com/repos/KAFERGGS/kaferprojects-ost/contents/'+path,{headers:{'Accept':'application/vnd.github.v3+json','Authorization':'Bearer '+t}})
+    if(!r.ok)return;const j=await r.json()
+    await fetch('https://api.github.com/repos/KAFERGGS/kaferprojects-ost/contents/'+path,{method:'DELETE',headers:{'Accept':'application/vnd.github.v3+json','Authorization':'Bearer '+t,'Content-Type':'application/json'},body:JSON.stringify({message:'Delete '+path,sha:j.sha,branch:'main'})})
+  }catch(e){}
 }
 
 // ═══ ALBUM CRUD ═══
