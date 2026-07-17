@@ -254,31 +254,18 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);overflow:hid
   </div>
 </div>
 
-<!-- Token Modal -->
-<div class="mo" id="tokenModal">
-  <div class="mdl" style="min-width:380px">
-    <h2>🔑 Token de GitHub</h2>
-    <p style="color:var(--text2);font-size:12px;margin:4px 0 10px">Necesitas configurar el token para subir archivos.</p>
-    <label>Tu token</label>
-    <input type="text" id="tokenInput" placeholder="ghp_..." style="width:100%;padding:8px 10px;background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:var(--r);color:var(--text);font-size:13px;font-family:var(--font);outline:none">
-    <div class="btns">
-      <button class="no" onclick="document.getElementById('tokenModal').classList.remove('on')">Cancelar</button>
-      <button class="ok" onclick="saveToken()">Guardar</button>
-    </div>
-  </div>
-</div>
+
 
 <script src="https://www.gstatic.com/firebasejs/11.0.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/11.0.1/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/11.0.1/firebase-storage-compat.js"></script>
 <script>
 // ═══ FIREBASE ═══
 firebase.initializeApp({apiKey:"AIzaSyBIK0xBEJhey8b2j8LyJUyeE_VNfgbpeiE",authDomain:"kaferprojectsost.firebaseapp.com",projectId:"kaferprojectsost",storageBucket:"kaferprojectsost.firebasestorage.app",messagingSenderId:"965445618134",appId:"1:965445618134:web:8cdd6d4a7ca0daef1ffc77"});
 const db=firebase.firestore();
-
-// ═══ GITHUB TOKEN ═══
-const _gh='Xmf4wdWASFWVvj7oyd2F2VE2NqUzTI1CP2KZ',_gp='ghp_';
-function gitToken(){let t=localStorage.getItem('kf_gh');if(!t)t=_gp+_gh;return t}
-function saveToken(){const v=document.getElementById('tokenInput').value.trim();if(!v)return;localStorage.setItem('kf_gh',v);document.getElementById('tokenModal').classList.remove('on')}
+const storage=firebase.storage();
+firebase.auth().signInAnonymously().catch(e=>console.error('Auth:',e));
 
 // ═══ STATE ═══
 let albums=[],curAlbum=null,isAdm=false;
@@ -294,10 +281,7 @@ let _kc=0;
 document.addEventListener('keydown',e=>{
   if(e.key==='k'||e.key==='K'){_kc++;if(_kc>=10){_kc=0;const c=prompt('Código de administrador:');if(c==='KaferOST1405'){isAdm=true;document.getElementById('adminBadge').style.display='inline';document.getElementById('adminBtn').style.display='flex';document.getElementById('addAlbumBtn').style.display='flex';rSB();if(curAlbum)renderA(curAlbum)}else alert('Código incorrecto')}}
 });
-document.getElementById('adminBtn').addEventListener('click',()=>{
-  document.getElementById('tokenInput').value=localStorage.getItem('kf_gh')||'';
-  document.getElementById('tokenModal').classList.add('on');
-});
+document.getElementById('adminBtn').addEventListener('click',()=>{alert('Ya eres admin! Los archivos se suben a Firebase Storage.')});
 
 // ═══ DATA ═══
 function escucha(){db.collection('albums').onSnapshot(()=>loadD())}
@@ -388,25 +372,14 @@ au.addEventListener('ended',nxS);
 au.addEventListener('play',()=>{pl=true;upP()});
 au.addEventListener('pause',()=>{pl=false;upP()});
 
-// ═══ GITHUB UPLOAD ═══
+// ═══ FIREBASE STORAGE ═══
 async function uploadFile(path,blob){
-  const t=gitToken();const data=await new Promise((ok,no)=>{const r=new FileReader();r.onload=()=>ok(r.result.split(',')[1]);r.onerror=no;r.readAsDataURL(blob)});
-  const r=await fetch('https://api.github.com/repos/KAFERGGS/kaferprojects-ost/contents/'+path,{
-    method:'PUT',
-    headers:{'Accept':'application/vnd.github.v3+json','Authorization':'Bearer '+t,'Content-Type':'application/json'},
-    body:JSON.stringify({message:'Add '+path,content:data,branch:'main'})
-  });
-  const j=await r.json();
-  if(!r.ok)throw new Error('GitHub: '+(j.message||r.status));
-  return 'https://raw.githubusercontent.com/KAFERGGS/kaferprojects-ost/main/'+path;
+  const ref=storage.ref(path);
+  const snapshot=await ref.put(blob);
+  return await ref.getDownloadURL();
 }
 async function deleteFile(path){
-  const t=gitToken();
-  try{
-    const r=await fetch('https://api.github.com/repos/KAFERGGS/kaferprojects-ost/contents/'+path,{headers:{'Accept':'application/vnd.github.v3+json','Authorization':'Bearer '+t}});
-    if(!r.ok)return;const j=await r.json();
-    await fetch('https://api.github.com/repos/KAFERGGS/kaferprojects-ost/contents/'+path,{method:'DELETE',headers:{'Accept':'application/vnd.github.v3+json','Authorization':'Bearer '+t,'Content-Type':'application/json'},body:JSON.stringify({message:'Delete '+path,sha:j.sha,branch:'main'})});
-  }catch(e){}
+  try{await storage.ref(path).delete()}catch(e){}
 }
 
 // ═══ ALBUM CRUD ═══
