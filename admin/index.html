@@ -377,7 +377,7 @@ const DB = {
   },
   async init(){await this._init()},
 
-  async getCode(){const r=await req(tx('settings').get('code'));return r?r.value:'kaferprojectsadmin'},
+  async getCode(){const r=await req(tx('settings').get('code'));return r?r.value:'1405'},
   async setCode(v){await req(tx('settings','readwrite').put({key:'code',value:v}))},
 
   async getCats(){return(await req(tx('categories').getAll()))||[]},
