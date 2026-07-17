@@ -560,7 +560,8 @@ async function subirBatch(){
     bar.style.width=Math.round(done/total*100)+'%'
     try{
       var ext=m.file.name.match(/\.(\w+)$/)?.[1]||'mp3'
-      var url=await uploadFile('audio/'+m.song.i+'.'+ext,m.file)
+      var baseId=m.song.i.replace(/\.\w+$/,'')
+      var url=await uploadFile('audio/'+baseId+'.'+ext,m.file)
       m.song.audioUrl=url;m.song.f=ext;m.song.d=0
       await db.collection('songs').doc(m.song.i).set(m.song)
       // Update the match display
