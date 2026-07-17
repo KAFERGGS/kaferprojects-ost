@@ -357,7 +357,7 @@ function renderA(id){
   h+='<div class="if"><div class="tag">ÁLBUM</div><h2>'+esc(al.n)+'</h2>';
   h+='<div class="mt">'+(al.public===false?'🔒 Privado <span class="sp"></span> ':'')+ss.length+' canciones</div>';
   h+='<div class="rw"><button class="pr" onclick="playAll()">▶ Reproducir</button>';
-  if(isAdm){h+='<button class="sc" onclick="addS()">+ Añadir canción</button><button class="sc" onclick="abrirBatch()">📤 Re-subir todo</button><button class="sc" onclick="edA()">✏ Editar</button><button class="dl" onclick="delA()">🗑 Eliminar</button>'}
+  if(isAdm){h+='<button class="sc" onclick="addS()">+ Añadir canción</button><button class="sc" onclick="abrirBatch()">📤 Re-subir todo</button><button class="sc" onclick="expA()">📥 Exportar</button><button class="sc" onclick="edA()">✏ Editar</button><button class="dl" onclick="delA()">🗑 Eliminar</button>'}
   h+='</div></div></div>';
   h+='<div class="sh"><span class="n">#</span><span class="t">TÍTULO</span><span class="d">DURACIÓN</span><span class="m"></span></div>';
   if(!ss.length)h+='<div class="em">'+(isAdm?'<button onclick="addS()">+ Añadir canción</button></div>':'Sin canciones</div>');
@@ -462,6 +462,17 @@ function delA(){if(!isAdm)return;const al=albums.find(x=>x.i===curAlbum);
     await db.collection('albums').doc(al.i).delete();
     curAlbum=null;await loadD();goHome();rSB();
   });
+}
+
+function expA(){
+  const al=albums.find(x=>x.i===curAlbum);if(!al)return
+  const ss=[...(al.ss||[])].sort((x,y)=>x.o-y.o)
+  var data={album:{n:al.n,public:al.public!==false,dt:al.dt},songs:ss.map(s=>({n:s.n,o:s.o,f:s.f||'mp3',d:s.d||0,dt:s.dt}))}
+  var blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'})
+  var url=URL.createObjectURL(blob)
+  var a=document.createElement('a');a.href=url;a.download=al.n.replace(/[^a-zA-Z0-9]/g,'_')+'.kaferalbum.json'
+  document.body.appendChild(a);a.click();a.remove()
+  setTimeout(function(){URL.revokeObjectURL(url)},5000)
 }
 
 // ═══ SONG CRUD ═══
