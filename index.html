@@ -351,7 +351,7 @@ function rSB(){
     if(!isAdm&&al.public===false)return;
     const d=document.createElement('div');d.className='sb-i'+(al.i===curAlbum?' on':'');d.dataset.aid=al.i;
     const t=document.createElement('div');t.className='th';
-    t.innerHTML=al.c?'<img src="'+al.c+'">':'<span>'+(al.n.charAt(0).toUpperCase()||'?')+'</span>';
+    t.innerHTML=al.c?'<img src="'+al.c+'" loading="lazy">':'<span>'+(al.n.charAt(0).toUpperCase()||'?')+'</span>';
     const inf=document.createElement('div');inf.className='inf';
     inf.innerHTML='<div class="nm">'+esc(al.n)+(al.public===false&&isAdm?' <span style="font-size:8px;color:var(--text3)">🔒</span>':'')+'</div><div class="sub">'+(al.ss?.length||0)+' canciones</div>';
     d.appendChild(t);d.appendChild(inf);
@@ -479,7 +479,7 @@ function delA(){if(!isAdm)return;const al=albums.find(x=>x.i===curAlbum);
   showConfirm('¿Eliminar álbum?','Se eliminarán todas sus canciones.',async()=>{
     if(!al)return;
     if(np.aid===al.i){au.pause();au.src='';pl=false;np.id=null;np.aid=null;np.idx=-1;np.q=[];document.getElementById('player').classList.remove('show')}
-    for(const s of al.ss||[]){try{await deleteFile('audio/'+s.i)}catch(e){};try{await db.collection('songs').doc(s.i).delete()}catch(e){}}
+    for(const s of al.ss||[]){try{await deleteFile('audio/'+s.i.replace(/\.\w+$/,'')+'.'+(s.f||'mp3'))}catch(e){};try{await db.collection('songs').doc(s.i).delete()}catch(e){}}
     await db.collection('albums').doc(al.i).delete();
     curAlbum=null;await loadD();goHome();rSB();
   });
@@ -659,27 +659,27 @@ async function subirBatch(){
   var btn=document.getElementById('batchUploadBtn');btn.disabled=true;btn.textContent='Subiendo...'
   var prog=document.getElementById('batchProgress');prog.style.display='block'
   var bar=document.getElementById('batchBar');var st=document.getElementById('batchStatus')
-  var total=batchMatches.filter(m=>m.file).length,done=0,fail=0
+  var total=batchMatches.filter(m=>m.file).length,done=0,fail=0,items
   for(var m of batchMatches){
     if(!m.file){done++;continue}
     st.textContent=(done+1)+'/'+total+': '+esc(m.song.n)
     bar.style.width=Math.round(done/total*100)+'%'
+    items=document.querySelectorAll('#batchMatchArea .bi')
     try{
       var ext=m.file.name.match(/\.(\w+)$/)?.[1]||'mp3'
       var baseId=m.song.i.replace(/\.\w+$/,'')
       var url=await uploadFile('audio/'+baseId+'.'+ext,m.file)
       m.song.audioUrl=url;m.song.f=ext;m.song.d=0
       await db.collection('songs').doc(m.song.i).set(m.song)
-      // Update the match display
-      var items=document.querySelectorAll('#batchMatchArea .bi')
       if(items[m.idx]){items[m.idx].querySelector('.st').className='st ok';items[m.idx].querySelector('span:last-child').textContent='✔ subido'}
-    }catch(e){fail++;st.textContent='Error: '+esc(e.message);items[m.idx].querySelector('.st').className='st no';items[m.idx].querySelector('span:last-child').textContent='✖ error'}
+    }catch(e){fail++;st.textContent='Error: '+esc(e.message);if(items&&items[m.idx]){items[m.idx].querySelector('.st').className='st no';items[m.idx].querySelector('span:last-child').textContent='✖ error'}}
     done++
   }
   bar.style.width='100%'
   st.textContent=fail?'Subido con '+(total-fail)+'/'+total+' exitos, '+fail+' errores':'✅ Completado!'
-  btn.textContent='Hecho'
+  btn.textContent='Listo'
   await loadD();if(curAlbum)renderA(curAlbum);rSB()
+  setTimeout(function(){cerrarBatch()},1500)
 }
 function cerrarBatch(){document.getElementById('batchModal').classList.remove('on')}
 
@@ -726,7 +726,7 @@ async function hSA(a,s,idx){
   if(a==='del'){
     showConfirm('¿Eliminar?','Se eliminará "'+s.n+'"',async()=>{
       if(np.id===s.i){au.pause();au.src='';pl=false;np.id=null;np.aid=null;np.idx=-1;np.q=[];document.getElementById('player').classList.remove('show')}
-      await deleteFile('audio/'+s.i);await db.collection('songs').doc(s.i).delete();await loadD();if(curAlbum)renderA(curAlbum);rSB()
+      await deleteFile('audio/'+s.i.replace(/\.\w+$/,'')+'.'+(s.f||'mp3'));await db.collection('songs').doc(s.i).delete();await loadD();if(curAlbum)renderA(curAlbum);rSB()
     });return
   }
   if(a==='up'&&idx>0&&al){
@@ -771,6 +771,19 @@ document.getElementById('progBar').addEventListener('input',function(){if(au.dur
 async function init(){
   const saved=localStorage.getItem('kf_tk');if(saved)isAdm=true;
   if(isAdm){document.getElementById('adminBadge').style.display='inline';document.getElementById('adminBtn').style.display='flex';document.getElementById('addAlbumBtn').style.display='flex';document.getElementById('importBtn').style.display='flex'}
+  // Global image error handler - show fallback
+  document.addEventListener('error',function(e){
+    var el=e.target
+    if(el.tagName==='IMG'&&el.parentNode){
+      var fallback=el.parentNode.querySelector('.img-fb')
+      if(!fallback){
+        var fb=document.createElement('span');fb.className='img-fb';fb.textContent='?'
+        fb.style.cssText='position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:inherit;color:rgba(255,255,255,.15);background:rgba(255,255,255,.02)'
+        el.parentNode.style.position='relative';el.parentNode.appendChild(fb)
+      }
+      el.style.display='none'
+    }
+  },true)
   escucha();
 }
 init();
